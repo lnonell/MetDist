@@ -21,16 +21,16 @@ ENV PATH=pkg-config:$PATH
 
 RUN install2.r --error --deps TRUE \
     doParallel \
-	foreach \
-	fitdistrplus \
-	VGAM \
-	ZOIP \
-	aod \
-	simplexreg \
-	betareg \
-	ZOIP \
-	gamlss \
-	quantreg \
+    foreach \
+    fitdistrplus \
+    VGAM \
+    ZOIP \
+    aod \
+    betareg \
+    ZOIP \
+    gamlss \
+    quantreg \
+    simplexreg \
     && rm -rf /tmp/downloaded_packages/
 
 RUN Rscript -e 'source("http://bioconductor.org/biocLite.R");biocLite("Biobase");biocLite("limma");biocLite("biomaRt");biocLite("RnBeads");biocLite("RnBeads.hg38")'
