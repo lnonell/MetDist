@@ -12,26 +12,30 @@
 FROM r-base:3.5.1
 
 RUN apt-get update && apt-get install -y \
-    r-cran-xml \
-    libssl-dev \
-    libcurl4-openssl-dev \
-    libxml2-dev \
-    ghostscript
+      r-cran-xml \
+      libssl-dev \
+      libcurl4-openssl-dev \
+      libxml2-dev \
+      libgsl0-dev \
+      libx11-dev \
+      libglu1-mesa-dev \
+      libfreetype6-dev \
+      ghostscript
 ENV PATH=pkg-config:$PATH
-
+ 
 RUN install2.r --error --deps TRUE \
-    doParallel \
-    foreach \
-    fitdistrplus \
-    VGAM \
-    ZOIP \
-    aod \
-    betareg \
-    ZOIP \
-    gamlss \
-    quantreg \
-    simplexreg \
-    && rm -rf /tmp/downloaded_packages/
+      simplexreg \
+      quantreg \
+      betareg \
+      doParallel \
+      foreach \
+      fitdistrplus \
+      VGAM \
+      ZOIP \
+      aod \
+      simplexreg \
+      gamlss \
+     && rm -rf /tmp/downloaded_packages/
 
 RUN Rscript -e 'source("http://bioconductor.org/biocLite.R");biocLite("Biobase");biocLite("limma");biocLite("biomaRt");biocLite("RnBeads");biocLite("RnBeads.hg38")'
 
