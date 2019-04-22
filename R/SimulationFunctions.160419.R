@@ -1,0 +1,1133 @@
+#####################################
+#functions to estimate params
+#####################################
+
+#do we need a function that estimates all at once? (betabinomial no!)
+#dp d'haver creat les fns per separat finalment faig una única fn (betabinomial no)
+est.all.params <- function(b){
+  #mirar si afegir aquí binf de gamlss
+  require(fitdistrplus)
+  require(VGAM)
+  require(ZOIP)
+
+  #NAs removal
+  b.1 <-b[!is.na(b)]
+  e<-0.01 #molt important per l'ajust!! quan e=0.001 dona unes estimacions de les cues brutals per la simplex 
+  b.prime <- ifelse(b.1==1, 1-e, ifelse(b.1==0,0+e,b.1))
+
+  mu=mean(b.prime)
+  var=var(b.prime)
+
+  params <-rep(NA,14)
+  names(params) <- c("s.mle.mu","s.mle.sig","s.zoip.mu","s.zoip.sig","b.mom.s1","b.mom.s2",
+                     "b.mle.s1","b.mle.s2","binf.mle.s1","binf.mle.s2","n.mom.m","n.mom.sd","n.mle.m","n.mle.sd")
+  
+  #simplex: MLE
+ 
+  params[1:2]<-tryCatch(fitdist(b.prime, distr=dsimplex, start=list(mu=0.5,dispersion=1), optim.method="Nelder-Mead")$estimate,error=function(err) NA)
+
+  #simplex: ZOIP
+  betai.df <- data.frame(b.prime)
+  mod <- try(RM.ZOIP(formula.mu = b.prime ~ 1, data = betai.df, family = "Simplex"),silent=T)
+  if(class(mod)!="try-error"){
+    params[3] <- coef(mod)$`Parameters.mu`
+    params[4] <- sqrt(coef(mod)$Parameters.sigma) ##ho he comprovat manualment, generant random dist
+  }
+
+  #beta: moments
+  params[5] <-  ((1 - mu) / var - 1 / mu) * mu ^ 2
+  params[6] <- params[5] * (1 / mu - 1)
+  #beta: MLE
+  params[7:8]<-tryCatch(fitdist(b.prime, distr=dbeta, start=list(shape1=mu,shape2=var))$estimate,error=function(err) NA)
+
+  #now dist that can be inflated
+  #beta inflated: recently added :-)
+  mu=mean(b.1)
+  var=var(b.1)
+  
+  f.1 <- sum(b.1 == 1)/length(b.1)
+  f.0 <- sum(b.1 == 0)/length(b.1)
+  
+  params[9:10]<-tryCatch(fitdist(b.1, distr=dzoabeta,  
+                                start=list(shape1=mu,shape2=var,pobs0=f.0,pobs1=f.1))$estimate,error=function(err) NA)
+  #normal: direct moments
+  params[11] = mu
+  params[12] = sqrt(var)
+  
+  #normal: MLE
+  params[13:14]<-tryCatch(fitdist(b.1, distr=dnorm)$estimate,error=function(err) NA)
+
+  return(params)
+
+}
+
+#simplex using fitdistr, simplexreg and ZOIP
+# est.simplex.params <- function(b,cond){
+#   require(MASS)
+#   require(simplexreg) #atenció VGAM tb conté dist dsimplex i rsimplex tot i que per les proves semblen iguals!!!
+#   require(ZOIP)
+#   
+#   #NAs removal
+#   b.prime <-b[!is.na(b)]
+#   #if b.prime contains 0's and/or 1's it gives error!! only ZOIP considers an inflated
+#   #we will add and substract an epsilon in such cases
+#   e<-0.01 #0.0001 donava error, he provat i aquest és el que fna millor
+#   b.prime <- ifelse(b.prime==1, 1-e, ifelse(b.prime==0,0+e,b.prime))
+# 
+#   cond <- cond[!is.na(b)]
+#   #moments: segons el paquet simplexreg, moments estimation coincideix amb mle estimator i per tant
+#   #pag 6 dp de la proposition 1
+#   
+#   #fitdistr
+#   simplex.params1 <-rep(NA,6)
+#   simplex.params1[1:2]<-tryCatch(fitdistr(b.prime, densfun=dsimplex, start=list(mu=0.5,sig=1), method="Nelder-Mead")$estimate,error=function(err) NA)
+#   #simplex
+#   mod.s <- try(simplexreg(b.prime ~ cond),silent=T)
+#   if(class(mod.s)!="try-error"){
+#     simplex.params1[3]<- mean(mod.s$meanmu)
+#     simplex.params1[4] <- sqrt(mod.s$Dispersion) #ho he comprovat manualment, generant random dist 
+#   }
+#   #ZOIP
+#   betai.df <- data.frame(b.prime) 
+#   mod <- try(RM.ZOIP(formula.mu = b.prime ~ 1, data = betai.df, family = "Simplex"),silent=T)
+#   if(class(mod)!="try-error"){
+#     simplex.params1[5] <- coef(mod)$`Parameters.mu`
+#     simplex.params1[6] <- sqrt(coef(mod)$Parameters.sigma) ##ho he comprovat manualment, generant random dist
+#   }
+#   return(simplex.params1)
+# }
+
+#beta: direct (from mean and var) using fitdistr 
+# est.beta.params <- function(b){
+#   require(MASS)
+#   #require(betareg) #no es necessita, dbeta pertany a stats
+#   
+#   #NAs removal
+#   b.prime <-b[!is.na(b)]
+#   #if b.prime contains 0's and/or 1's it gives error!! only moments works
+#   #we will add and substract an epsilon in such cases
+#   e<-0.0001
+#   b.prime <- ifelse(b.prime==1, 1-e, ifelse(b.prime==0,0+e,b.prime))
+#   
+#   mu=mean(b.prime)
+#   var=var(b.prime)
+#   
+#   beta.params <-rep(NA,4)
+#   
+#   #moments 
+#   beta.params[1] <-  ((1 - mu) / var - 1 / mu) * mu ^ 2
+#   beta.params[2] <-  beta.params[1] * (1 / mu - 1)
+#   #fitdistr
+#   beta.params[3:4]<-tryCatch(fitdistr(b.prime, densfun=dbeta, start=list(shape1=mu,shape2=var))$estimate,error=function(err) NA)
+#  
+#   return(beta.params)
+# }
+
+# est.betainf.params <- function(b){
+#   #b should be a vector with the number of methylated reads by sample, no beta values!
+#   require(fitdistrplus)
+#   require(VGAM)
+#   
+#   #NAs removal 
+#   b.prime <-b[!is.na(b)]
+#   f.1 <- sum(b.prime == 1)/length(b.prime)
+#   f.0 <- sum(b.prime == 0)/length(b.prime)
+#   
+#   
+#   params <-rep(NA,2)
+#   names(params) <- c("binf.mle.s1","binf.mle.s2")
+#   
+#   #moments 
+#   mu <- mean(b.prime)
+#   var <- var(b.prime) 
+#   
+#  #fitdistr, using estimated params through moments 
+#   params[1:2]<-tryCatch(fitdist(b.prime, distr=dzoabeta,  
+#                                         start=list(shape1=mu,shape2=var,pobs0=f.0,pobs1=f.1))$estimate,error=function(err) NA)
+#   return(params)
+# }
+
+#DEF betabinomial, only for sequencing: ho canvio a fitdistrplus
+est.betabin.params <- function(xi,ni){
+  #b should be a vector with the number of methylated reads by sample, no beta values!
+  require(fitdistrplus)
+  require(VGAM)
+  
+  #NAs removal 
+  xi.prime <- round(xi[!is.na(xi)],0)
+  ni.prime <- ni[!is.na(xi)]
+  
+  n<- max(xi.prime)
+  betabin.params <-rep(NA,6)
+  betabin.params[6] <- n
+  names(betabin.params) <- c("bb.mom.s1","bb.mom.s2","sim.n","bb.mle.s1","bb.mle.s2","real.n")
+  
+  #moments 
+  m1=sum(xi.prime*ni.prime)/sum(ni.prime)
+  m2=sum(xi.prime^2*ni.prime)/sum(ni.prime)
+  
+  s1 <-  (n*m1-m2)/(n*(m2/m1-m1-1)+m1)
+  s2 <-  ((n-m1)*(n-(m2/m1)))/(n*((m2/m1)-m1-1)+m1)
+  #those are alpha and beta
+ 
+  betabin.params[1] <- s1
+  betabin.params[2] <- s2
+  
+  # if(s1<0 | is.na(s1)) s1<-1
+  # if(s2<0 | is.na(s2)) s2<-1
+  #fitdistr, using estimated params through moments 
+  betabin.params[3:5]<-tryCatch(fitdist(xi.prime, distr=dbetabinom.ab,  
+                                        start=list(size=n,shape1=1,shape2=1),lower=c(0,0))$estimate,error=function(err) NA)
+  return(betabin.params)
+}
+
+# tarone <- function(xi,ni){
+#   p <- sum()
+#   E <- 
+# }  
+
+#Li he de passar la n també, no és el max!!
+est.betabin.params.OLD <- function(b){
+  #b should be a vector with the number of methylated reads by sample, no beta values!
+  require(fitdistrplus)
+  require(VGAM)
+  
+  #NAs removal and round to integer
+  b.prime <- round(b[!is.na(b)],0)
+  n <- max(b.prime)
+  betabin.params <-rep(NA,6)
+  betabin.params[6] <- n
+  names(betabin.params) <- c("bb.mom.s1","bb.mom.s2","sim.n","bb.mle.s1","bb.mle.s2","real.n")
+  
+  #moments 
+  mu <- mean(b.prime)
+  var <- var(b.prime) 
+  
+  #from wikipedia!
+  s1 <-  (n*mu-var)/(n*((var/mu)-mu-1)+mu)
+  s2 <-  ((n-mu)*(n-(var/mu)))/(n*((var/mu)-mu-1)+mu)
+  
+  
+  betabin.params[1] <- s1
+  betabin.params[2] <- s2
+  
+  if(s1<0 | is.na(s1)) s1<-1
+  if(s2<0 | is.na(s2)) s2<-1
+  #fitdistr, using estimated params through moments 
+  betabin.params[3:5]<-tryCatch(fitdist(b.prime, distr=dbetabinom.ab,  
+                                      start=list(size=n,shape1=s1,shape2=s2),lower=c(0,0))$estimate,error=function(err) NA)
+   return(betabin.params)
+}
+
+# #normal:direct (mean and var from sample) and fitdistr
+# est.normal.params <- function(b){
+#   library(MASS)
+#   
+#   #NAs removal
+#   b.prime <-b[!is.na(b)]
+#   
+#   normal.params <-rep(NA,4)
+#   
+#   #direct
+#   normal.params[1] = mean(b.prime)
+#   normal.params[2] = sd(b.prime)
+#   
+#   #fitdistr
+#   normal.params[3:4]<-tryCatch(fitdistr(b.prime, densfun="normal")$estimate,error=function(err) NA)
+#   
+#   return(normal.params)
+# }
+# 
+# ### fitdistrplus per a estimar totes les dst
+# #simplex using fitdistr, simplexreg and ZOIP
+# est.params.fitdistrplus <- function(b){
+#   
+#   require(fitdistrplus)
+#   require(VGAM) #atenció VGAM tb conté dist dsimplex i rsimplex tot i que per les proves semblen iguals!!!
+# #  require(simplexreg) #COM QUE ENTREN EN CONFLICTE CREO UNA ALTRA FUNCIÓ MÉS A BAIX
+#   
+#   params <-rep(NA,8)
+#   names(params) <- c("simplex.mu","simplex.sig","simplex.mu.vgam","simplex.sig.vgam","beta.s1","beta.s2","normal.m","normal.sd")
+#   
+#   b <- round(unlist(rnb.meth[i,]),4)
+#   #NAs removal
+#   b.prime <-b[!is.na(b)]
+#   #if b.prime contains 0's and/or 1's it gives error!! only ZOIP considers an inflated
+#   #we will add and substract an epsilon in such cases
+#   e<-0.01 #0.0001 donava error, he provat i aquest és el que fna millor
+#   b.prime <- ifelse(b.prime==1, 1-e, ifelse(b.prime==0,0+e,b.prime))
+#   
+#   mu <- mean(b.prime,na.rm=T)
+#   var <- var(b.prime,na.rm=T)
+#   
+#   #simplex
+#  # params[1:2]<-tryCatch(fitdist(b.prime, distr=dsimplex.simplexreg, start=list(mu=0.5,sig=1),optim.method="Nelder-Mead")$estimate,error=function(err) NA)
+#   params[3:4]<-tryCatch(fitdist(b.prime, distr=dsimplex, start=list(mu=0.5,dispersion=1),optim.method="Nelder-Mead")$estimate,error=function(err) NA)
+#   #beta
+#   params[5:6]<-tryCatch(fitdist(b.prime, distr=dbeta, start=list(shape1=mu,shape2=var))$estimate,error=function(err) NA)
+#   #normal
+#   params[7:8]<-tryCatch(fitdist(b.prime, distr="norm")$estimate,error=function(err) NA)
+#                         
+#   return(params)
+# }
+
+#aquesta és per fer proves, hem vist que va millor VGAM, així que l'elimino!
+
+# #per a provar el temps
+# est.params.simplex.MASS <- function(b){
+#   
+#   require(MASS)
+#   require(VGAM) #atenció VGAM tb conté dist dsimplex i rsimplex tot i que per les proves semblen iguals!!!
+#   #require(simplexreg)
+#   
+#   params <-rep(NA,2)
+#   names(params) <- c("simplex.mu","simplex.sig")
+#   
+#   b <- round(unlist(rnb.meth[i,]),4)
+#   #NAs removal
+#   b.prime <-b[!is.na(b)]
+#   #if b.prime contains 0's and/or 1's it gives error!! only ZOIP considers an inflated
+#   #we will add and substract an epsilon in such cases
+#   e<-0.01 #0.0001 donava error, he provat i aquest és el que fna millor
+#   b.prime <- ifelse(b.prime==1, 1-e, ifelse(b.prime==0,0+e,b.prime))
+#   
+#   mu <- mean(b.prime,na.rm=T)
+#   var <- var(b.prime,na.rm=T)
+#   
+#   #simplex
+#   params[1:2]<-tryCatch(fitdistr(b.prime, densfun=dsimplex, start=list(mu=0.5,dispersion=1),method="Nelder-Mead")$estimate,error=function(err) NA)
+#   
+#   return(params)
+# }
+
+
+#function to obtain simulations, for dml
+fn.simu.dml <- function(mod="beta", p1.v, p2.v, N=1000, N.cond1=100, N.cond2=100){
+  library(VGAM) #abans feia servir betareg
+  #mod= simplex, beta, normal
+  #p1.v = vector of param1 of distribution to sample from
+  #p2.v = vector of param2 of distribution to sample from
+  #N number of probes (CpG sites) to generate
+  #N.cond1 = number of samples belonging to condition1
+  #N.cond2 = number of samples belonging to condition2
+  #falta opció per a que siguin iguals i per tant N.cond2 agafi de la mateixa dist (amb igual params)
+
+  #STUDY TO GENERATE P1.V & P2.V HERE INSTEAD OF PASSING AS PARAMETER
+  N.cond = N.cond1+N.cond2
+  sample.names = c(paste("SC1",1:N.cond1,sep="_"),paste("CS2",1:N.cond2,sep="_"))
+  row.names = paste0("dml",1:N)
+  cpgs <- matrix(NA, nrow=N, ncol= (N.cond), dimnames=list(row.names,sample.names))
+
+    if (mod=="simplex"){
+
+    for (i in 1:N) {
+      #sample in the numbers an the take corresponding mu1 and sig1
+      j <-sample(1:length(p1.v),1)
+      mu1 <- p1.v[j]
+      sig1 <- p2.v[j]
+      cpgi.1 <- rsimplex(N.cond1,mu1,sig1)
+
+      k <-sample(1:length(p1.v),1)
+      mu2 <- p1.v[k]
+      sig2 <- p2.v[k]
+      cpgi.2 <- rsimplex(N.cond2,mu2,sig2)
+
+      cpgs[i,] <- c(cpgi.1,cpgi.2)
+    }
+
+  } else if (mod=="beta"){
+
+    for (i in 1:N) {
+      j <-sample(1:length(p1.v),1)
+      s1 <- p1.v[j]
+      s2 <- p2.v[j]
+      cpgi.1 <- rbeta(N.cond1,s1,s2)
+
+      k <-sample(1:length(p1.v),1)
+      s1 <- p1.v[k]
+      s2 <- p2.v[k]
+      cpgi.2 <- rbeta(N.cond2,s1,s2)
+
+      cpgs[i,] <- c(cpgi.1,cpgi.2)
+    }
+
+  } else if (mod=="normal"){
+
+    for (i in 1:N) {
+      j <-sample(1:length(p1.v),1)
+      m1 <- p1.v[j]
+      s1 <- p2.v[j]
+      cpgi.1 <- rnorm(N.cond1,m1,s1)
+
+      k <-sample(1:length(p1.v),1)
+      m2 <- p1.v[k]
+      s2 <- p2.v[k]
+      cpgi.2 <- rnorm(N.cond2,m2,s2)
+
+      cpgs[i,] <- c(cpgi.1,cpgi.2)
+    }
+
+  }
+    return(cpgs)
+}
+
+#now for non.dml, from the same dist
+fn.simu.non.dml <- function(mod="beta",p1.v, p2.v, N=1000, N.cond1=100, N.cond2=100){
+  library(VGAM) #abans simplexreg
+  #mod= simplex, beta, normal
+  #p1.v = vector of param1 of distribution to sample from
+  #p2.v = vector of param2 of distribution to sample from 
+  #N number of probes (CpG sites) to generate
+  #N.cond1 = number of samples belonging to condition1  
+  #N.cond2 = number of samples belonging to condition2
+  #falta opció per a que siguin iguals i per tant N.cond2 agafi de la mateixa dist (amb igual params)
+  
+  #STUDY TO GENERATE P1.V & P2.V HERE INSTEAD OF PASSING AS PARAMETER
+  
+  #in this case 
+  N.cond = N.cond1+N.cond2
+  sample.names = c(paste("SC1",1:N.cond1,sep="_"),paste("CS2",1:N.cond2,sep="_"))
+  row.names = paste0("l",1:N)
+  cpgs <- matrix(NA, nrow=N, ncol= (N.cond), dimnames=list(row.names,sample.names))
+  
+  if (mod=="simplex"){
+  
+    for (i in 1:N) {
+      #sample in the numbers an the take corresponding mu1 and sig1
+      j <-sample(1:length(p1.v),1)
+      mu1 <- p1.v[j]
+      sig1 <- p2.v[j]
+      cpgs[i,]<- rsimplex(N.cond,mu1,sig1)
+    }
+    
+  } else if (mod=="beta"){
+    
+    for (i in 1:N) {
+      j <-sample(1:length(p1.v),1)
+      s1 <- p1.v[j]
+      s2 <- p2.v[j]
+      cpgs[i,] <- rbeta(N.cond,s1,s2)
+      
+    }
+    
+  } else if (mod=="normal"){
+    
+    for (i in 1:N) {
+      j <-sample(1:length(p1.v),1)
+      m1 <- p1.v[j]
+      s1 <- p2.v[j]
+      cpgs[i,] <- rnorm(N.cond,m1,s1)
+      
+     }
+    
+  }  
+  return(cpgs)
+  
+}
+
+#una altra fn amb dos tipus de distribucions?
+# simplex-beta
+# simplex-normal
+# beta-normal
+
+#fn per a les simulacions de la betabinomial, amb un param afegit
+fn.simu.betabin <- function(mod="betabin",n, p1.v, p2.v, N.dml=100,N.nondml=1900, N.cond1=100, N.cond2=100){
+  library(VGAM) #agafar dbetabin.ab
+  #size és la n que necessita la dbetabin.ab
+  #mod= simplex, beta, normal
+  #p1.v = vector of param1 of distribution to sample from
+  #p2.v = vector of param2 of distribution to sample from
+  #N number of probes (CpG sites) to generate
+  #N.cond1 = number of samples belonging to condition1
+  #N.cond2 = number of samples belonging to condition2
+  #falta opció per a que siguin iguals i per tant N.cond2 agafi de la mateixa dist (amb igual params)
+  
+  #dml
+  N.cond = N.cond1+N.cond2
+  sample.names = c(paste("SC1",1:N.cond1,sep="_"),paste("CS2",1:N.cond2,sep="_"))
+  row.names = paste0("dml",1:N)
+  cpgs.dml <- matrix(NA, nrow=N.dml, ncol= (N.cond), dimnames=list(row.names,sample.names))
+ 
+    for (i in 1:N) {
+      j <-sample(1:length(p1.v),1)
+      s1 <- p1.v[j]
+      s2 <- p2.v[j]
+      ni <- n[j]
+      cpgi.1 <- rbetabinom.ab(n=N.cond1,size=ni, s1,s2)
+      
+      k <-sample(1:length(p1.v),1)
+      s1 <- p1.v[k]
+      s2 <- p2.v[k]
+      ni <- n[k]
+      cpgi.2 <- rbeta(N.cond2,size=ni,s1,s2)
+      
+      cpgs.dml[i,] <- c(cpgi.1,cpgi.2)
+    }
+    
+  #nondml
+  N.cond = N.cond1+N.cond2
+  sample.names = c(paste("SC1",1:N.cond1,sep="_"),paste("CS2",1:N.cond2,sep="_"))
+  row.names = paste0("l",1:N)
+  cpgs.nondml <- matrix(NA, nrow=N.nondml, ncol= (N.cond), dimnames=list(row.names,sample.names))
+  
+  for (i in 1:N) {
+    j <-sample(1:length(p1.v),1)
+    s1 <- p1.v[j]
+    s2 <- p2.v[j]
+    ni <- n[j]
+    cpgs[i,] <- rbetabinom.ab(n=N.cond,size=ni, s1,s2)
+    
+  }
+  #ajuntar i return
+  cpgs <-rbind(cpgs.dml,cpgs.non.dml)
+  return(cpgs)
+}
+
+    
+
+#function to perform simulations given a list of cpgs and a condition
+# fn.models <- function(cpgs,cond1){
+#   #should we obtain regression coefs too?
+#   
+#   require(simplexreg)
+#   require(betareg)
+#   require(ZOIP) #simplex inflated
+#   require(gamlss) #beta inflated
+#   require(quantreg)
+#   
+# 
+#   N = nrow(cpgs)
+#   p.s <- array(NA,dim=N)
+#   p.b <- array(NA,dim=N)
+#   p.sinf <- array(NA,dim=N)
+#   p.binf <- array(NA,dim=N)
+#   p.n <- array(NA,dim=N)
+#   p.l <- array(NA,dim=N)
+#   p.q <- array(NA,dim=N)
+#   # guardo tb els estimates?? potser si, no?  
+#   # cpgs.df <- data.frame(cond, cpgs)
+#     #Dades simplex
+#   for (i in 1:N){
+#     print(i)
+#     cpgi <- cpgs[i,]
+#     
+#     #remove NAs for all
+#     cond <- cond1[!is.na(cpgi)]
+#     cpgi <-cpgi[!is.na(cpgi)]
+#     
+#     #NON INFLATED models
+#     #simplex regression with simplexreg
+#     m.s <- try(simplexreg(cpgi ~ cond),silent=T)
+#     if(class(m.s)!="try-error"){
+#       m.s.sum<-summary(m.s, save=FALSE)
+#       p.s[i] <- m.s.sum$coefficients$mean["cond2","Pr(>|z|)"] 
+#     }
+#     
+#     # beta regression with betareg
+#     m.b <-  try(betareg(cpgi ~ cond),silent=T)
+#     if(class(m.b)!="try-error"){
+#       m.b.sum<-summary(m.b, save=FALSE)
+#       p.b[i] <- m.b.sum$coefficients$mean["cond2","Pr(>|z|)"] 
+#     }
+#     
+#     #simplex inflated with ZOIP package, need tot transform into a df
+#     df <- data.frame(cond,cpgi)
+#     m.sinf <- try(RM.ZOIP(formula.mu = cpgi~cond,  
+#                   link = c("logit","identity","identity","identity"), family="Simplex", data=df),silent=T)
+#     if(class(m.sinf)!="try-error"){
+#       estimate <- m.sinf$par #from ZOIP package, to extract p from mu param
+#       se       <- try(sqrt(diag(solve(m.sinf$HM))),silent=T)
+#       if(class(se)!="try-error"){
+#         zvalue   <- estimate / se
+#         pvalue   <- 2 * stats::pnorm(abs(zvalue), lower.tail=F)
+#         p.sinf[i]<-pvalue["cond2"]
+#       }
+#     }  
+#     
+#     #beta inflated with gamlss package
+#     #sink("out.txt") #no tinc ous que no surti output!!!
+#     m.binf <- try(gamlss(cpgi ~ cond, family = BEINF),silent=T) #so suppress gamlss messages, que és molt pesat!
+#     #sink(NULL)
+#     if(class(m.binf)!="try-error"){
+#       m.binf.sum<-tryCatch(summary(m.binf, save=TRUE), error=function(err) NA)
+#       p.prov <- m.binf.sum$pvalue["cond2"]
+#       if(!is.null(p.prov)) p.binf[i]<- p.prov
+#     }
+#     
+#     #Normal regression
+#     m.n <-  try(lm(cpgi ~ cond),silent=T)
+#     if(class(m.n)!="try-error"){
+#       m.n.sum<-summary(m.n, save=TRUE)
+#       print(m.n.sum)
+#       p.n[i] <- tryCatch(m.n.sum$coefficients["cond2","Pr(>|t|)"] , error=function(err) NA)
+#     }
+#     # #beta-binomial?
+#     
+#     # 
+#     #logistic, hem de canviar les condicions, logística vol 0s i 1s
+#     cond2 <- as.factor(as.numeric(cond)-1)
+#     m.l <-  try(glm(cond2 ~ cpgi, family=binomial),silent=T)
+#     if(class(m.l)!="try-error"){
+#       m.l.sum<-summary(m.l, save=FALSE)
+#       p.l[i] <-tryCatch( m.l.sum$coefficients["cpgi","Pr(>|z|)"], error=function(err) NA)
+#       #no sé pq en alguns casos només hi ha intercept!
+#     }
+#     
+#     #quantile regression with rq, 75%
+#     m.q <-  try(rq(cpgi ~ cond, tau=.75),silent=T)
+#     if(class(m.q)!="try-error"){
+#       m.q.sum<-tryCatch(summary(m.q, se="ker")[[3]], error=function(err) NA)
+#       p.q[i] <- tryCatch(m.q.sum["cond2","Pr(>|t|)"] , error=function(err) NA)
+#     }
+#   }  
+#   cpgs.models <- data.frame(p.s,p.b,p.sinf,p.binf,p.n,p.l,p.q)
+#   rownames(cpgs.models) <- rownames(cpgs) #be careful, cpgs can be matrix so can have repetitions but df no!
+#   return(cpgs.models)
+# }
+
+
+fn.models.betabin.parallel <- function(all,covg,cond1,cores=4){
+#in this case I also get the overdispersion param, phi
+#https://www.r-bloggers.com/binary-beta-beta-binomial/
+  library(aod)
+  library(doParallel)
+  library(foreach)
+  
+  N = nrow(all)
+  
+  cl <- makeCluster(cores,type="PSOCK",outfile="output.txt")
+  registerDoParallel(cl)
+  cpgs.models.bb<- foreach(i=1:N,.combine=rbind, .packages=c("aod")) %dopar% {
+    y <- all[i,]
+    n <- covg[i,]
+    y1 <- ifelse(n==y,y-1,y)
+    p.bb <- NA
+    p.bb.od <- NA
+    df <-data.frame(y1,n,cond1)
+    m.s <- try(betabin(cbind(y1, n - y1) ~ cond1, ~ 1,data=df),silent=T)
+     if(class(m.s)!="try-error"){
+       m.s.sum<-summary(m.s)
+       p.bb <- m.s.sum@Coef["cond12","Pr(> |z|)"] 
+       p.bb.od <- m.s.sum@Phi["phi.(Intercept)","Pr(> z)"]
+     } 
+    c(p.bb,p.bb.od)
+  }
+  stopCluster(cl)
+  colnames(cpgs.models.bb) <- c("p.bb","p.bb.od") 
+  rownames(cpgs.models.bb) <- rownames(all)
+  return(cpgs.models.bb)
+}  
+
+
+
+fn.models.parallel <- function(cpgs,cond1,cores=4){
+  #should we obtain regression coefs too?
+  
+  library(doParallel)
+  library(foreach)
+  
+  require(simplexreg)
+  require(betareg)
+  require(ZOIP) #simplex inflated
+  require(gamlss) #beta inflated
+  require(quantreg)
+  
+  
+  N = nrow(cpgs)
+ 
+  cl <- makeCluster(cores,type="PSOCK",outfile="output.txt")
+  registerDoParallel(cl)
+  cpgs.models<- foreach(i=1:N,.combine=rbind, .packages=c("simplexreg","betareg","gamlss","ZOIP","quantreg")) %dopar% {
+    cpgi <- cpgs[i,]
+    
+    #remove NAs for all #we should also remove values out of [0,1]...this affects to the normal simulated data
+    e<-0.00001
+    cond <- cond1[!is.na(cpgi) & cpgi>e & cpgi<1-e]
+    cpgi <-cpgi[!is.na(cpgi) & cpgi>e & cpgi<1-e]
+    
+    p.s <- NA
+    p.b <- NA
+    p.sinf <- NA
+    p.binf <- NA
+    p.n <- NA
+    p.l <- NA
+    p.q <- NA
+    p.s.gamlss <- NA
+    
+    #NON INFLATED models
+    #simplex regression with simplexreg
+    m.s <- try(simplexreg(cpgi ~ cond),silent=T)
+    if(class(m.s)!="try-error"){
+      m.s.sum<-summary(m.s)
+      p.s <- m.s.sum$coefficients$mean["cond2","Pr(>|z|)"] 
+    }
+    
+    # beta regression with betareg
+    m.b <-  try(betareg(cpgi ~ cond),silent=T)
+    if(class(m.b)!="try-error"){
+      m.b.sum<-summary(m.b)
+      p.b <- m.b.sum$coefficients$mean["cond2","Pr(>|z|)"] 
+    }
+    
+    #simplex inflated with ZOIP package, need tot transform into a df
+    df <- data.frame(cond,cpgi)
+    m.sinf <- try(RM.ZOIP(formula.mu = cpgi~cond,  
+                          link = c("logit","identity","identity","identity"), family="Simplex", data=df),silent=T)
+    if(class(m.sinf)!="try-error"){
+      estimate <- m.sinf$par #from ZOIP package, to extract p from mu param
+      se       <- try(sqrt(diag(solve(m.sinf$HM))),silent=T)
+      if(class(se)!="try-error"){
+        zvalue   <- estimate / se
+        pvalue   <- 2 * stats::pnorm(abs(zvalue), lower.tail=F)
+        p.sinf<-pvalue["cond2"]
+      }
+    }  
+    
+    
+    #beta inflated with gamlss package
+    #sink("out.txt") #no tinc ous que no surti output!!!
+    m.binf <- try(gamlss(cpgi ~ cond, family = BEINF),silent=T) #so suppress gamlss messages, que és molt pesat!
+    #sink(NULL)
+    if(class(m.binf)!="try-error"){
+      m.binf.sum<-tryCatch(summary(m.binf, save=TRUE), error=function(err) NA)
+      p.prov <- m.binf.sum$pvalue["cond2"]
+      if(!is.null(p.prov)) p.binf<- p.prov
+    }
+    
+    #Normal regression
+    m.n <-  try(lm(cpgi ~ cond),silent=T)
+    if(class(m.n)!="try-error"){
+      m.n.sum<-summary(m.n)
+      print(m.n.sum)
+      p.n <- tryCatch(m.n.sum$coefficients["cond2","Pr(>|t|)"] , error=function(err) NA)
+    }
+    # #beta-binomial?
+    
+    # 
+    #logistic, hem de canviar les condicions, logística vol 0s i 1s
+    cond2 <- as.factor(as.numeric(cond)-1)
+    m.l <-  try(glm(cond2 ~ cpgi, family=binomial),silent=T)
+    if(class(m.l)!="try-error"){
+      m.l.sum<-summary(m.l)
+      p.l <-tryCatch( m.l.sum$coefficients["cpgi","Pr(>|z|)"], error=function(err) NA)
+      #no sé pq en alguns casos només hi ha intercept!
+    }
+    
+    #quantile regression with rq, 75%
+    m.q <-  try(rq(cpgi ~ cond, tau=.75),silent=T)
+    if(class(m.q)!="try-error"){
+      m.q.sum<-tryCatch(summary(m.q, se="ker")[[3]], error=function(err) NA)
+      p.q <- tryCatch(m.q.sum["cond2","Pr(>|t|)"] , error=function(err) NA)
+    }
+    
+    m.sgamlss <- try(gamlss(cpgi ~ cond, family = SIMPLEX),silent=T) #so suppress gamlss messages, que és molt pesat!
+    #sink(NULL)
+    if(class(m.sgamlss)!="try-error"){
+      m.sgamlss.sum<-tryCatch(summary(m.sgamlss, save=TRUE), error=function(err) NA)
+      p.prov <- m.sgamlss.sum$pvalue["cond2"]
+      if(!is.null(p.prov)) p.s.gamlss<- p.prov
+    }
+    
+  c(p.s,p.b,p.sinf,p.binf,p.n,p.l,p.q,p.s.gamlss)
+}
+stopCluster(cl)
+colnames(cpgs.models) <- c("p.s","p.b","p.sinf","p.binf","p.n","p.l","p.q","p.s.gamlss") #potser hauríem de retornar el num de NAs
+rownames(cpgs.models) <- rownames(cpgs)
+return(cpgs.models)
+}  
+
+# #faig una altra funcio com l'anterior pero trenient els inflated i gamlss pel simplex
+# #deixo els paquets ZOIP i GAMLSS per si tenen alguna influencia
+# fn.models.noninf.parallel <- function(cpgs,cond1,cores=4){
+#   #should we obtain regression coefs too?
+#   
+#   library(doParallel)
+#   library(foreach)
+#   
+#   require(simplexreg)
+#   require(betareg)
+#   require(ZOIP) #simplex inflated
+#   require(gamlss) #beta inflated
+#   require(quantreg)
+#   
+#     N = nrow(cpgs)
+#   
+#   cl <- makeCluster(cores,type="PSOCK",outfile="output.txt")
+#   registerDoParallel(cl)
+#   cpgs.models<- foreach(i=1:N,.combine=rbind, .packages=c("simplexreg","betareg","gamlss","ZOIP","quantreg")) %dopar% {
+#     cpgi <- cpgs[i,]
+#     
+#     #remove NAs for all #we should also remove values out of [0,1]...this affects to the normal simulated data
+#     e<-0.00001
+#     cond <- cond1[!is.na(cpgi) & cpgi>e & cpgi<1-e]
+#     cpgi <-cpgi[!is.na(cpgi) & cpgi>e & cpgi<1-e]
+#     
+#     p.s <- NA
+#     p.b <- NA
+#     p.n <- NA
+#     p.l <- NA
+#     p.q <- NA
+#    
+#     #NON INFLATED models
+#     #simplex regression with simplexreg
+#     m.s <- try(simplexreg(cpgi ~ cond),silent=T)
+#     if(class(m.s)!="try-error"){
+#       m.s.sum<-summary(m.s)
+#       p.s <- m.s.sum$coefficients$mean["cond2","Pr(>|z|)"] 
+#     }
+#     
+#     # beta regression with betareg
+#     m.b <-  try(betareg(cpgi ~ cond),silent=T)
+#     if(class(m.b)!="try-error"){
+#       m.b.sum<-summary(m.b)
+#       p.b <- m.b.sum$coefficients$mean["cond2","Pr(>|z|)"] 
+#     }
+#     
+#     #Normal regression
+#     m.n <-  try(lm(cpgi ~ cond),silent=T)
+#     if(class(m.n)!="try-error"){
+#       m.n.sum<-summary(m.n)
+#       print(m.n.sum)
+#       p.n <- tryCatch(m.n.sum$coefficients["cond2","Pr(>|t|)"] , error=function(err) NA)
+#     }
+#     # #beta-binomial?
+#     
+#     # 
+#     #logistic, hem de canviar les condicions, logística vol 0s i 1s
+#     cond2 <- as.factor(as.numeric(cond)-1)
+#     m.l <-  try(glm(cond2 ~ cpgi, family=binomial),silent=T)
+#     if(class(m.l)!="try-error"){
+#       m.l.sum<-summary(m.l)
+#       p.l <-tryCatch( m.l.sum$coefficients["cpgi","Pr(>|z|)"], error=function(err) NA)
+#       #no sé pq en alguns casos només hi ha intercept!
+#     }
+#     
+#     #quantile regression with rq, 75%
+#     m.q <-  try(rq(cpgi ~ cond, tau=.75),silent=T)
+#     if(class(m.q)!="try-error"){
+#       m.q.sum<-tryCatch(summary(m.q, se="ker")[[3]], error=function(err) NA)
+#       p.q <- tryCatch(m.q.sum["cond2","Pr(>|t|)"] , error=function(err) NA)
+#     }
+#     
+#      c(p.s,p.b,p.n,p.l,p.q)
+#   }
+#   stopCluster(cl)
+#   colnames(cpgs.models) <- c("p.s","p.b","p.n","p.l","p.q") #potser hauríem de retornar el num de NAs
+#   rownames(cpgs.models) <- rownames(cpgs)
+#   return(cpgs.models)
+# }  
+
+
+
+apply.limma <- function(cpgs, cond){
+  #first transform to M's
+  cpgs.M <- log2(cpgs/(1-cpgs))
+  
+  #agafo els noms per a poder ordenar dp
+  nams <- rownames(cpgs)
+  library(limma)
+  design<-model.matrix(~0+cond)
+  fit<-lmFit(cpgs.M,design) #model could also be fitted to the batch corrected data
+  contrast.matrix<-makeContrasts(cond2-cond1,levels=design)
+  fit2<-contrasts.fit(fit,contrast.matrix)
+  fite<-eBayes(fit2)
+  top.table<-topTable(fite,coef=1,number=Inf,adjust="BH")
+  top.table.s <- top.table[nams,] #ordenat com al principi!
+  return(top.table.s)
+}
+
+#fn per a fer simulacions amb diferents n
+fn.simulations <- function(est.params=est.params,cond.n= c(3,5,10,30,100,500),cores=6){
+  #he de guardar els models, si no dp no els podré estudiar
+  res.list<-NULL
+  cpgs.list <-NULL
+  i=1
+  for (n in cond.n){
+    # 1 generate simulations
+    #simplex
+    print(n)
+    p1.v <- est.params$s.zoip.mu[which(est.params$s.zoip.sig>0)] #tot i que aquí no cal filtrar
+    p2.v <- est.params$s.zoip.sig[which(est.params$s.zoip.sig>0)] #sembla que estigui malament però no!
+    cpgs.simplex.dml <- fn.simu.dml(mod="simplex", p1.v=p1.v, p2.v=p2.v, N=100, N.cond1=n, N.cond2=n)
+    cpgs.simplex.non.dml <- fn.simu.non.dml(mod="simplex", p1.v=p1.v, p2.v=p2.v, N=1900, N.cond1=n, N.cond2=n)
+    cpgs.simplex <-rbind(cpgs.simplex.dml,cpgs.simplex.non.dml) 
+    
+    #beta
+    p1.v <- est.params$b.mle.s1[!is.na(est.params$b.mle.s1)]
+    p2.v <- est.params$b.mle.s2[!is.na(est.params$b.mle.s1)]
+    cpgs.beta.dml <- fn.simu.dml(mod="beta", p1.v=p1.v, p2.v=p2.v, N=100, N.cond1=n, N.cond2=n)
+    cpgs.beta.non.dml <- fn.simu.non.dml(mod="beta", p1.v=p1.v, p2.v=p2.v, N=1900, N.cond1=n, N.cond2=n)
+    cpgs.beta <-rbind(cpgs.beta.dml,cpgs.beta.non.dml)
+    
+    #normal
+    p1.v <- est.params$n.mle.m[!is.na(est.params$n.mle.m)]
+    p2.v <- est.params$n.mle.sd[!is.na(est.params$n.mle.m)]
+    cpgs.normal.dml <- fn.simu.dml(mod="normal", p1.v=p1.v, p2.v=p2.v, N=100, N.cond1=n, N.cond2=n)
+    cpgs.normal.non.dml <- fn.simu.non.dml(mod="normal", p1.v=p1.v, p2.v=p2.v, N=1900, N.cond1=n, N.cond2=n)
+    cpgs.normal <-rbind(cpgs.normal.dml,cpgs.normal.non.dml)
+    
+    # 2 run models in parallel!!
+    cond <- as.factor(c(rep(1,n),rep(2,n))) #sempre 1 i 2, les fns estan preparades per això
+    simplex.models <- fn.models.parallel(cpgs.simplex, cond1=cond, cores=cores)
+    beta.models <- fn.models.parallel(cpgs.beta, cond1=cond, cores=cores)
+    normal.models <- fn.models.parallel(cpgs.normal, cond1=cond, cores=cores)
+    # 3 limma
+    cpgs.simplex.limma <- apply.limma(cpgs.simplex,cond) #retorna la toptable ordenada
+    cpgs.beta.limma <- apply.limma(cpgs.beta,cond) #retorna la toptable ordenada
+    cpgs.normal.limma <- apply.limma(cpgs.normal,cond) #retorna la toptable ordenada
+    
+    #ho afegeixo a cada model 
+    cpgs.simplex.models.withlimma <- data.frame(simplex.models,p.limma=cpgs.simplex.limma$P.Value)
+    cpgs.beta.models.withlimma <- data.frame(beta.models,p.limma=cpgs.beta.limma$P.Value)
+    cpgs.normal.models.withlimma <- data.frame(normal.models,p.limma=cpgs.normal.limma$P.Value)
+    
+    #guardo els models
+    cpgs <- list(cpgs.simplex=cpgs.simplex, cpgs.beta=cpgs.beta, cpgs.normal=cpgs.normal)
+    
+    models.list <- list(cpgs.simplex.models=cpgs.simplex.models.withlimma, 
+                        cpgs.beta.models=cpgs.beta.models.withlimma, 
+                        cpgs.normal.models=cpgs.normal.models.withlimma)
+    
+    cpgs.list[[i]] <- cpgs
+    res.list[[i]] <- models.list
+   
+    i=i+1
+  }
+  
+  names(cpgs.list) <- cond.n 
+  save(cpgs.list,file="simulated.cpgs.list.RData")
+  names(res.list) <- cond.n  
+  save(res.list,file="simulated.models.list.RData")
+  #ho guardo tot i retorno els models
+  return(res.list)  
+}
+
+fn.simulations.betabinomial <- function(est.params=est.params.betabin,cond.n= c(3,5,10,30,100,500),cores=6){
+  
+  res.list<-NULL
+  cpgs.list <-NULL
+  i=1
+  for (n in cond.n){
+    # 1 generate simulations
+    #simplex
+    print(n)
+    #beta bin
+    p1.v <- est.params$b.mle.s1[!is.na(est.params$bb.mle.s1)]
+    p2.v <- est.params$b.mle.s2[!is.na(est.params$bb.mle.s1)]
+    cpgs.beta.dml <- fn.simu.dml(mod="beta", p1.v=p1.v, p2.v=p2.v, N=100, N.cond1=n, N.cond2=n)
+    cpgs.beta.non.dml <- fn.simu.non.dml(mod="beta", p1.v=p1.v, p2.v=p2.v, N=1900, N.cond1=n, N.cond2=n)
+    cpgs.beta <-rbind(cpgs.beta.dml,cpgs.beta.non.dml)
+    
+    #normal
+    p1.v <- est.params$n.mle.m[!is.na(est.params$n.mle.m)]
+    p2.v <- est.params$n.mle.sd[!is.na(est.params$n.mle.m)]
+    cpgs.normal.dml <- fn.simu.dml(mod="normal", p1.v=p1.v, p2.v=p2.v, N=100, N.cond1=n, N.cond2=n)
+    cpgs.normal.non.dml <- fn.simu.non.dml(mod="normal", p1.v=p1.v, p2.v=p2.v, N=1900, N.cond1=n, N.cond2=n)
+    cpgs.normal <-rbind(cpgs.normal.dml,cpgs.normal.non.dml)
+    
+    # 2 run models in parallel!!
+    cond <- as.factor(c(rep(1,n),rep(2,n))) #sempre 1 i 2, les fns estan preparades per això
+    simplex.models <- fn.models.parallel(cpgs.simplex, cond1=cond, cores=cores)
+    beta.models <- fn.models.parallel(cpgs.beta, cond1=cond, cores=cores)
+    normal.models <- fn.models.parallel(cpgs.normal, cond1=cond, cores=cores)
+    # 3 limma
+    cpgs.simplex.limma <- apply.limma(cpgs.simplex,cond) #retorna la toptable ordenada
+    cpgs.beta.limma <- apply.limma(cpgs.beta,cond) #retorna la toptable ordenada
+    cpgs.normal.limma <- apply.limma(cpgs.normal,cond) #retorna la toptable ordenada
+    
+    #ho afegeixo a cada model 
+    cpgs.simplex.models.withlimma <- data.frame(simplex.models,p.limma=cpgs.simplex.limma$P.Value)
+    cpgs.beta.models.withlimma <- data.frame(beta.models,p.limma=cpgs.beta.limma$P.Value)
+    cpgs.normal.models.withlimma <- data.frame(normal.models,p.limma=cpgs.normal.limma$P.Value)
+    
+    #guardo els models
+    cpgs <- list(cpgs.simplex=cpgs.simplex, cpgs.beta=cpgs.beta, cpgs.normal=cpgs.normal)
+    
+    models.list <- list(cpgs.simplex.models=cpgs.simplex.models.withlimma, 
+                        cpgs.beta.models=cpgs.beta.models.withlimma, 
+                        cpgs.normal.models=cpgs.normal.models.withlimma)
+    
+    cpgs.list[[i]] <- cpgs
+    res.list[[i]] <- models.list
+    
+    i=i+1
+  }
+  
+  names(cpgs.list) <- cond.n 
+  save(cpgs.list,"simulated.cpgs.list.RData")
+  names(res.list) <- cond.n  
+  save(res.list,"simulated.models.list.RData")
+  #ho guardo tot i retorno els models
+  return(res.list)  
+}
+ 
+find.dml.n <- function(x,alpha=0.05) length(x[!is.na(x) & x<alpha])
+
+models.eval <- function(models,dml.r=100,alpha=0.05, adjust=TRUE){
+  #for simulated data
+  #models: matrix with each column a model tested
+  #dml.r: number of rows dml (always at the beginning), the rest should be non dml
+  #alpha: signif
+  
+  #adjust
+  if (adjust)  models <- apply(models,2,p.adjust)
+  
+  #for each column
+  models.dml <- models[1:dml.r,]
+  models.nondml <- models[(dml.r+1):nrow(models),]
+  
+  nas <- apply(models,2,function(x) sum(is.na(x)))
+  
+  TP <- apply(models.dml,2,find.dml.n,alpha=0.05)
+  FP <- apply(models.nondml,2,find.dml.n,alpha=0.05)
+  TN <- 1900-FP
+  FN <- dml.r-TP
+  
+  sens <- TP/(TP+FN)
+  spec <- TN/(TN+FP)
+  
+  #find.dml <- function(x) {y <- x[!is.na(x) & x<0.05]; length(intersect(y,))
+  
+  jaccard <-TP/(TP+FP+FN)
+    
+  eval.meas <- rbind(nas, sens, spec, TP, TN, FP, FN,jaccard)  
+  return(eval.meas)
+  
+}
+  
+#per si la poso: https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient
+sorensen <- function(TP,FP,FN) {Sor <- 2*TP/(2*TP+FP+FN); return(Sor)}
+
+#function to estimate the best distribution that fits the data (non inflated!!): simplex, beta or normal
+#per estimar beta-binomial, hauria de tenir el coverage també
+best.dist <- function(x){
+  library(fitdistrplus)
+  library(simplexreg) 
+  mu <- mean(x,na.rm=T)
+  var <- var(x,na.rm=T)
+  
+  fit.s <- try(fitdist(x, distr=dsimplex, start=list(mu=0.5,sig=2),optim.method="Nelder-Mead"),TRUE) #no entenc pq falla amb les dades guardades!!
+  if(class(fit.s)!="try-error")  s.aic <- fit.s$aic else s.aic=NA
+  
+  fit.b <- try(fitdist(x, distr=dbeta, start=list(shape1=mu,shape2=var)),TRUE) #aqta és del paquet fitdistrplus
+  if(class(fit.b)!="try-error")  b.aic <- fit.b$aic else b.aic=NA
+  
+  fit.n <- try(fitdist(x, distr="norm"),TRUE)
+  if(class(fit.n)!="try-error")  n.aic <- fit.n$aic else n.aic=NA
+  
+  ########## Kolmogorov-Smirnov test
+  ks.s <- try(ks.test(x, "psimplex", fit.s$estimate[1],fit.s$estimate[2]),TRUE)
+  if(class(ks.s)!="try-error") s.ks <- ks.s$p.value else s.ks=NA
+  
+  ks.b <- try(ks.test(x, "pbeta", fit.b$estimate[1],fit.b$estimate[2]),TRUE)
+  if(class(ks.b)!="try-error") b.ks <- ks.b$p.value else b.ks=NA
+  
+  ks.n <- try(ks.test(x, pnorm, fit.n$estimate[1],fit.n$estimate[2]),TRUE)
+  if(class(ks.n)!="try-error") n.ks <- ks.n$p.value else n.ks=NA
+  
+  v <- c(s.aic,b.aic,n.aic,s.ks,b.ks,n.ks)
+  names(v) <- c("simplex.aic","beta.aic","normal.aic","simplex.ks.p","beta.ks.p","normal.ks.p")
+  return(v)
+}
+
+# best.dist.VGAM <- function(x){ #NO LA PUC FER SERVIR PQ VGAM NO CONTÉ LA FN PSIMPLEX, HE DE FER SIMPLEXREG
+#   library(fitdistrplus)
+#   library(VGAM) 
+#   mu <- mean(x,na.rm=T)
+#   var <- var(x,na.rm=T)
+#   
+#   fit.s <- try(fitdist(x, distr=dsimplex, start=list(mu=0.5,dispersion=2),optim.method="Nelder-Mead"),TRUE) #no entenc pq falla amb les dades guardades!!
+#   if(class(fit.s)!="try-error")  s.aic <- fit.s$aic else s.aic=NA
+#   
+#   fit.b <- try(fitdist(x, distr=dbeta, start=list(shape1=mu,shape2=var)),TRUE) #aqta és del paquet fitdistrplus
+#   if(class(fit.b)!="try-error")  b.aic <- fit.b$aic else b.aic=NA
+#   
+#   fit.n <- try(fitdist(x, distr="norm"),TRUE)
+#   if(class(fit.n)!="try-error")  n.aic <- fit.n$aic else n.aic=NA
+#   
+#   ########## Kolmogorov-Smirnov test
+#   ks.s <- try(ks.test(x, "psimplex", fit.s$estimate[1],fit.s$estimate[2]),TRUE)
+#   if(class(ks.s)!="try-error") s.ks <- ks.s$p.value else s.ks=NA
+#   
+#   ks.b <- try(ks.test(x, "pbeta", fit.b$estimate[1],fit.b$estimate[2]),TRUE)
+#   if(class(ks.b)!="try-error") b.ks <- ks.b$p.value else b.ks=NA
+#   
+#   ks.n <- try(ks.test(x, pnorm, fit.n$estimate[1],fit.n$estimate[2]),TRUE)
+#   if(class(ks.n)!="try-error") n.ks <- ks.n$p.value else n.ks=NA
+#   
+#   v <- c(s.aic,b.aic,n.aic,s.ks,b.ks,n.ks)
+#   names(v) <- c("simplex.aic","beta.aic","normal.aic","simplex.ks.p","beta.ks.p","normal.ks.p")
+#   return(v)
+# }
+# 
+
+#to get the best
+best.aic.ks <- function(best.dist.i){
+  best.aic <- names(which.min(round(best.dist.i[1:3],4)))
+  best.ks <- names(which.max(round(best.dist.i[4:6],4)))
+  if (is.null(best.aic))  best.aic <- NA
+  if (is.null(best.ks))  best.ks <- NA
+  return(c(best.aic,best.ks))
+}
+
+
+best.dist.betabin <- function(xi,ni){
+  #en ppi ni no ho necessito
+  require(fitdistrplus)
+  require(VGAM)
+  
+  xi.prime <- round(xi[!is.na(xi)],0)
+  ni.prime <- ni[!is.na(xi)]
+  
+  n<- max(xi.prime)
+
+  fit.b <- try(fitdist(xi.prime, distr=dbetabinom.ab, start=list(size=n, shape1=1,shape2=1),lower=c(0,0)),TRUE) #aqta és del paquet fitdistrplus
+  if(class(fit.b)!="try-error")  b.aic <- fit.b$aic else b.aic=NA
+  
+  ########## Kolmogorov-Smirnov test
+  ks.b <- try(ks.test(b.prime, "pbetabinom.ab", fit.b$estimate[1],fit.b$estimate[2],fit.b$estimate[3]),TRUE)
+  if(class(ks.b)!="try-error") b.ks <- ks.b$p.value else b.ks=NA
+  
+  v <- c(b.aic,b.ks)
+  names(v) <- c("betabin.aic","betabin.ks.p")
+  return(v)
+}
+
+
+best.dist.betabin.OLD <- function(b){
+  #b should be a vector with the number of methylated reads by sample, no beta values!
+  #malament: N should be the total number of measures not the max!
+  require(fitdistrplus)
+  require(VGAM)
+  
+  #NAs removal and round to integer
+  b.prime <- round(b[!is.na(b)],0)
+  n <- max(b.prime)
+  betabin.params <-rep(NA,4)
+  
+  mu <- mean(b.prime)
+  var <- var(b.prime) 
+  
+  #from wikipedia!
+  s1 <-  (n*mu-var)/(n*((var/mu)-mu-1)+mu)
+  s2 <-  ((n-mu)*(n-(var/mu)))/(n*((var/mu)-mu-1)+mu)
+  
+  fit.b <- try(fitdist(b.prime, distr=dbetabinom.ab, start=list(size=n, shape1=s1,shape2=s2)),TRUE) #aqta és del paquet fitdistrplus
+  if(class(fit.b)!="try-error")  b.aic <- fit.b$aic else b.aic=NA
+
+    ########## Kolmogorov-Smirnov test
+  ks.b <- try(ks.test(b.prime, "pbetabinom.ab", fit.b$estimate[1],fit.b$estimate[2],fit.b$estimate[3]),TRUE)
+  if(class(ks.b)!="try-error") b.ks <- ks.b$p.value else b.ks=NA
+  
+  v <- c(b.aic,b.ks)
+  names(v) <- c("betabin.aic","betabin.ks.p")
+  return(v)
+}
+
+best.aic.ks.with.betabin <- function(best.dist.i){
+  best.aic <- names(which.min(round(best.dist.i[1:4],4)))
+  best.ks <- names(which.max(round(best.dist.i[5:8],4)))
+  if (is.null(best.aic))  best.aic <- NA
+  if (is.null(best.ks))  best.ks <- NA
+  return(c(best.aic,best.ks))
+}
