@@ -1,5 +1,16 @@
 #21/4/19
 #Les dades les analitzo amb RnBeads i les filtro al cluster samscratch:\Simplex\RRBS_188
+#faig l'analisi completa al cluster (samscratch\Simplex\RRBS_188\reports_anal), triga unes 24h en fer import,
+#QC, exploratory i anàlisi. resultats al cluster, tot i que dona un error a l'hora de fer l'analisi i no dona
+#resultats de Differential methylation
+#les simulacions i altres objectes els faig al cluster, especialment els de beta bin triguen més d'un dia!
+# Aquests generats al cluster amb diferents scripts pq trigaven molt
+# betabin.params.est.RData
+# best.dist.betabin.filtered.RData
+# best.dist.all.filtered.RData
+# simulated.cpgs.list.RData
+# simulated.models.list.RData
+
 workingDir<-"D:/Doctorat/Simplex/MetDist/Data/RRBS_188"
 setwd(workingDir)
 
@@ -9,6 +20,14 @@ str(samples)
 table(samples$patient_sex)
 # f   m N/A 
 # 63  96  29 
+#according to exploratory analysis (cluster) there is a big difference in PCA in Tissue vs MSC
+table(samples$patient_sex,samples$Tissue_vs_MSC)
+#       Ewing_Tumor MSC
+# f            56   4
+# m            83   5
+# N/A           1  23
+
+#de moment ho deixo així...
 
 #resulta que agafa patient_age com a factor...
 samples$patient_age <- as.numeric(samples$patient_age)
@@ -515,164 +534,6 @@ rnb.meth2comp.models.adj.p[rnb.meth2comp.models.adj.p[,5]<0.05 & !is.na(rnb.meth
 rnb.meth2comp.models.adj.p[rnb.meth2comp.models.adj.p[,6]<0.05 & !is.na(rnb.meth2comp.models.adj.p[,6]),]
 rnb.meth2comp.models.adj.p[rnb.meth2comp.models.adj.p[,7]<0.05 & !is.na(rnb.meth2comp.models.adj.p[,7]),]
 
-#no veig predomini de X i Y check documentació,
-#potser puc fer comparació de la var lineage entre endoderm (58) i mesoderm (78)
-# ############################
-# 3.2 lineage endoderm vs mesoderm
-# ############################
-
-#torno a filtrar:
-rownames(rnb.meth) <-annot.col
-rnb.meth.f <-rnb.meth[rnb.meth.na.cpg<187,]
-dim(rnb.meth.f)
-#38003   216
-#save(rnb.meth.f,file="meth.betas.poquesNAs.RData") 
-
-samples2comp <- samples.new[samples.new$lineage %in% c("endoderm","mesoderm"),]
-dim(samples2comp) #136
-
-table(samples2comp$tissue) #variat
-table(samples2comp$cell) #variat
-
-rnb.meth2comp <- rnb.meth.f[,samples2comp$sampleName]
-dim(rnb.meth2comp) #38003   136
-
-table(colnames(rnb.meth2comp)==samples2comp$sampleName) #true!
-
-cond <- as.factor(car::recode(samples2comp$lineage,"'endoderm'=1;'mesoderm'=2"))
-
-t1 <- Sys.time()
-rnb.meth2comp.lineage.models <- fn.models.parallel(rnb.meth2comp, cond1=cond, cores=6)
-t2 <- Sys.time()
-t2-t1 #34.32845 mins 6 cores 4.23 hours (1 core )
-head(rnb.meth2comp.lineage.models)
-#save(rnb.meth2comp.lineage.models,file="rnb.meth2comp.lineage.models.RData")
-load(file="rnb.meth2comp.lineage.models.RData")
-
-#amb limma
-limma.res <- apply.limma(rnb.meth2comp,cond)
-#comprovo dims i ordres i afegeixo
-head(rnb.meth2comp.lineage.models)
-head(limma.res)
-dim(rnb.meth2comp.lineage.models)
-#[1]  38003     8
-dim(limma.res)
-#[1]  38003     6
-
-rnb.meth2comp.lineage.models.withlimma <- data.frame(rnb.meth2comp.lineage.models,p.limma=limma.res$P.Value)
-save(rnb.meth2comp.lineage.models.withlimma,file="rnb.meth2comp.lineage.models.withlimma.RData")
-
-#RENOMBRO PER APROFITAR EL QUE HI HAVIA
-rnb.meth2comp.lineage.models <- rnb.meth2comp.lineage.models.withlimma
-
-
-rnb.meth2comp.lineage.models.adj.p <- apply(rnb.meth2comp.lineage.models,2,p.adjust)
-
-rnb.meth2comp.lineage.models.adj.p[rnb.meth2comp.lineage.models.adj.p[,1]<0.05 & !is.na(rnb.meth2comp.lineage.models.adj.p[,1]),]
-rnb.meth2comp.lineage.models.adj.p[rnb.meth2comp.lineage.models.adj.p[,2]<0.05 & !is.na(rnb.meth2comp.lineage.models.adj.p[,2]),]
-rnb.meth2comp.lineage.models.adj.p[rnb.meth2comp.lineage.models.adj.p[,3]<0.05 & !is.na(rnb.meth2comp.lineage.models.adj.p[,3]),]
-rnb.meth2comp.lineage.models.adj.p[rnb.meth2comp.lineage.models.adj.p[,4]<0.05 & !is.na(rnb.meth2comp.lineage.models.adj.p[,4]),]
-rnb.meth2comp.lineage.models.adj.p[rnb.meth2comp.lineage.models.adj.p[,5]<0.05 & !is.na(rnb.meth2comp.lineage.models.adj.p[,5]),]
-rnb.meth2comp.lineage.models.adj.p[rnb.meth2comp.lineage.models.adj.p[,6]<0.05 & !is.na(rnb.meth2comp.lineage.models.adj.p[,6]),]
-rnb.meth2comp.lineage.models.adj.p[rnb.meth2comp.lineage.models.adj.p[,7]<0.05 & !is.na(rnb.meth2comp.lineage.models.adj.p[,7]),]
-
-r.is <-grep("Island",rownames(rnb.meth2comp.lineage.models.adj.p))
-
-rnb.meth2comp.lineage.models.adj.p.island <- rnb.meth2comp.lineage.models.adj.p[r.is,]
-
-head(rnb.meth2comp.lineage.models.adj.p.island) #tot 1's???
-
-rnb.meth2comp.lineage.models.adj.p.island[rnb.meth2comp.lineage.models.adj.p.island[,1]<0.05 & !is.na(rnb.meth2comp.lineage.models.adj.p.island[,1]),]
-rnb.meth2comp.lineage.models.adj.p.island[rnb.meth2comp.lineage.models.adj.p.island[,2]<0.05 & !is.na(rnb.meth2comp.lineage.models.adj.p.island[,2]),]
-rnb.meth2comp.lineage.models.adj.p.island[rnb.meth2comp.lineage.models.adj.p.island[,3]<0.05 & !is.na(rnb.meth2comp.lineage.models.adj.p.island[,3]),]
-rnb.meth2comp.lineage.models.adj.p.island[rnb.meth2comp.lineage.models.adj.p.island[,4]<0.05 & !is.na(rnb.meth2comp.lineage.models.adj.p.island[,4]),]
-rnb.meth2comp.lineage.models.adj.p.island[rnb.meth2comp.lineage.models.adj.p.island[,5]<0.05 & !is.na(rnb.meth2comp.lineage.models.adj.p.island[,5]),]
-rnb.meth2comp.lineage.models.adj.p.island[rnb.meth2comp.lineage.models.adj.p.island[,6]<0.05 & !is.na(rnb.meth2comp.lineage.models.adj.p.island[,6]),]
-rnb.meth2comp.lineage.models.adj.p.island[rnb.meth2comp.lineage.models.adj.p.island[,7]<0.05 & !is.na(rnb.meth2comp.lineage.models.adj.p.island[,7]),]
-
-a <- rnb.meth2comp.lineage.models.adj.p.island[rnb.meth2comp.lineage.models.adj.p.island[,3]<0.05 & !is.na(rnb.meth2comp.lineage.models.adj.p.island[,3]),]
-a[order(a[,3]),]
-
-#In endoderm at a region upstream of SOX17, we observe specific loss of DNA methylation accompanied by epigenetic remodelling to a poised state
-#SOX17 comença a chr8 54,457,935, diu 240kb
-
-s <- 54457935
-TF_SOX17<-annot[annot$Chromosome=="chr8" & annot$Start<s & annot$Start>s-240000,]
-
-table(rnb.meth["chr8_54427466_Open Sea",])
-0 1 
-2 9
-
-table(rnb.meth["chr8_54427466_Open Sea",samples.new$lineage=="endoderm"]) #4 1's'
-table(rnb.meth["chr8_54427466_Open Sea",samples.new$lineage=="mesoderm"]) #1 1 KKK
-
-annot[annot$Chromosome=="chr8" & annot$Start<s+100000 & annot$Start>s-250000,]
-
-#Gata4
-rownames(rnb.meth) <- annot
-
-s <- 11704204
-TF_GATA4<-annot[annot$Chromosome=="chr8" & annot$Start<s & annot$Start>s-240000,]
-TF_GATA4
-# 25203873       chr8 11471018 11471019      +   4 57     Open Sea rs7546801
-# 25205531       chr8 11540416 11540417      +   1 28     Open Sea      <NA>
-#   25205897       chr8 11550543 11550544      +   2 69     Open Sea      <NA>
-#   25206053       chr8 11555202 11555203      +   3 60     Open Sea      <NA>
-#   25206201       chr8 11558241 11558242      +   2 65     Open Sea      <NA>
-#   25206699       chr8 11566006 11566007      +   2 66     Open Sea      <NA>
-#   25206729       chr8 11566683 11566684      +   3 38     Open Sea      <NA>
-#   25206737       chr8 11566745 11566746      +   3 50     Open Sea      <NA>
-#   25206749       chr8 11567077 11567078      +   1 57     Open Sea      <NA>
-#   25207263       chr8 11583581 11583582      +   4 49     Open Sea      <NA>
-#   25207803       chr8 11597335 11597336      +   3 49     Open Sea      <NA>
-#   25209509       chr8 11660145 11660146      +   1 48     Open Sea      <NA>
-#   25210607       chr8 11692557 11692558      +  11 66       Island      <NA>
-
-#revisar aquests!!
-
-table(rnb.meth["chr8_54427466_Open Sea",])
-
-TF_GATA4<-annot[annot$Chromosome=="chr8" & annot$Start<s & annot$Start>s-240000,]
-TF_GATA4_annot <- paste(TF_GATA4$Chromosome,TF_GATA4$Start,TF_GATA4$"CGI Relation",sep="_")
-
-TF_GATA4 <- rnb.meth[TF_GATA4_annot,]
-
-#resultats
-rnb.meth2comp.lineage.models.adj.p[intersect(rownames(rnb.meth2comp.lineage.models.adj.p),
-                                             rownames(TF_GATA4)),]
-
-pdf("first.TF_GATA4.dens.groups.pdf")
-for (i in 1:length(TF_GATA4_annot)){
-  ki=TF_GATA4_annot[i]
-  e <- rnb.meth[ki,samples.new$lineage=="endoderm"]
-  m <-rnb.meth[ki,samples.new$lineage=="mesoderm"] 
-  e <- e[!is.na(e)]
-  m <- m[!is.na(m)]
-  if (length(e)>1 & length(m)>1) {
-    plot(density(e,na.rm=T),main=ki, col="green",xlim=c(0,1))
-    lines(density(m,na.rm=T),col="orange")
-  }
-}
-dev.off()
-
-#potser chr8_11566006_Open Sea, la resta bastant kk
-
-pdf("first.100.dens.groups.pdf")
-for (i in 1:100){
-    e <- rnb.meth[i,samples.new$lineage=="endoderm"]
-    m <-rnb.meth[i,samples.new$lineage=="mesoderm"] 
-    e <- e[!is.na(e)]
-    m <- m[!is.na(m)]
-    if (length(e)>1 & length(m)>1) {
-      plot(density(e,na.rm=T),main=i, col="green",xlim=c(0,1))
-      lines(density(m,na.rm=T),col="orange")
-    }
-}
-dev.off()
-
-head(rnb.meth2comp.lineage.models.adj.p.island[order(rnb.meth2comp.lineage.models.adj.p.island[,3]),],100)
-i="chr19_891986_Island"
-#el problema és que hi ha mooooolts missings i al final a cada comp acabem tenint pocs valors
 
 ######################################################################
 ############ 4. Estimació de la millor dist per a cada cpg ###########

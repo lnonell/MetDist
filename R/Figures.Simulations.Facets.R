@@ -5,7 +5,7 @@
 #Supplementary tables 3-7:  Summary of performance measures for simulations N=3,5,10,30,500
 
 #header amb tot
-source("D:/Doctorat/Simplex/R/Figures.HeaderScript.R")
+source("D:/Doctorat/Simplex/MetDist/R/Figures.HeaderScript.R")
 
 
 ########################################################################################
@@ -16,28 +16,28 @@ source("D:/Doctorat/Simplex/R/Figures.HeaderScript.R")
 #la fn sense les inflated està abaix!!!
 #per a fer nomes de 3 a 30 descomentar línia scale_x.... dins la fn  fn
 #fn sense les inflated (i comptant que als evals hi ha gamlss per simplex), es diu igual!!!
-plot.eval.curves <- function(evals,measure=jaccard,ylim_0=0,ylim_1=1){
-  measure <- enquo(measure)
-  
-  eval.all <- cbind (do.call("rbind",evals),N=as.numeric(rep(names(res.list),each=9)))
-  eval.all<- data.frame(eval.all,model.p=rownames(eval.all),stringsAsFactors = F)
-  
-  #aquí elimino les inflated 
-  eval.all <- eval.all[!(eval.all$model.p %in% c("p.binf","p.sinf","p.s.gamlss")),]
-  
-  eval.all$model.p <- factor(recode(eval.all$model.p,  p.b="beta", p.s="simplex",
-                                    p.n="normal", p.l="logistic", 
-                                    p.q="quantile",p.limma="limma"),
-                             levels=c("beta", "simplex","normal","logistic","quantile","limma"))
-  
-  p <- ggplot(data=eval.all,aes(x=N, y=!!measure, colour=model.p)) +
-    geom_point(size = 1)+ geom_line(size=0.6) +ylim(ylim_0,ylim_1)
-  p +  theme(legend.position="bottom",legend.title = element_blank(), axis.title.x = element_blank(),
-             axis.text.x = element_text(size=8,angle=45), axis.text.y = element_text(size=8),
-             axis.title = element_text(size=7), legend.key.size = unit(0.8,"line")) +
-   scale_x_continuous(breaks=as.numeric(names(res.list)))
- # scale_x_continuous(breaks=c(3,5,10,30),limits=c(0,30)) #la poso i la trec segons necessitat
-}    
+# plot.eval.curves <- function(evals,measure=jaccard,ylim_0=0,ylim_1=1){
+#   measure <- enquo(measure)
+#   
+#   eval.all <- cbind (do.call("rbind",evals),N=as.numeric(rep(names(res.list),each=9)))
+#   eval.all<- data.frame(eval.all,model.p=rownames(eval.all),stringsAsFactors = F)
+#   
+#   #aquí elimino les inflated 
+#   eval.all <- eval.all[!(eval.all$model.p %in% c("p.binf","p.sinf","p.s.gamlss")),]
+#   
+#   eval.all$model.p <- factor(recode(eval.all$model.p,  p.b="beta", p.s="simplex",
+#                                     p.n="normal", p.l="logistic", 
+#                                     p.q="quantile",p.limma="limma"),
+#                              levels=c("beta", "simplex","normal","logistic","quantile","limma"))
+#   
+#   p <- ggplot(data=eval.all,aes(x=N, y=!!measure, colour=model.p)) +
+#     geom_point(size = 1)+ geom_line(size=0.6) +ylim(ylim_0,ylim_1)
+#   p +  theme(legend.position="bottom",legend.title = element_blank(), axis.title.x = element_blank(),
+#              axis.text.x = element_text(size=8,angle=45), axis.text.y = element_text(size=8),
+#              axis.title = element_text(size=7), legend.key.size = unit(0.8,"line")) +
+#    scale_x_continuous(breaks=as.numeric(names(res.list)))
+#  # scale_x_continuous(breaks=c(3,5,10,30),limits=c(0,30)) #la poso i la trec segons necessitat
+# }    
 # plot.eval.curves <- function(evals,measure=jaccard,ylim_0=0,ylim_1=1){
 #   measure <- enquo(measure)
 # 
@@ -88,8 +88,7 @@ plot.eval.curves <- function(evals,measure=jaccard,ylim_0=0,ylim_1=1){
 #   #scale_x_continuous(breaks=c(3,5,10,30),limits=c(0,30)) #la poso i la trec segons necessitat
 # }    
 
-load(file=file.path(GSE50660_data,"simulated.models.list.RData"))
-
+#load(file=file.path(GSE50660_data,"simulated.models.list.RData"))
 
 #fn to eval and flatten data sets
 eval_flatten <- function(data){
@@ -110,14 +109,14 @@ load(file=file.path(GSE50660_data,"simulated.models.list.RData"))
 gse50.ef <- eval_flatten(res.list)
 load(file=file.path(GSE116339_data,"simulated.models.list.RData"))
 gse11.ef <- eval_flatten(res.list)
-load(file=file.path(RRBS216_data,"simulated.models.list.RData"))
+load(file=file.path(RRBS188_data,"simulated.models.list.RData"))
 rrbs.ef <- eval_flatten(res.list)
 load(file=file.path(WGBS81_data,"simulated.models.list.RData"))
 wgbs.ef <- eval_flatten(res.list)
 
 eval.all <- rbind(data.frame(gse50.ef,dataset="A450k-smoking"),
                    data.frame(gse11.ef,dataset="EPIC-PBB"),
-                   data.frame(rrbs.ef,dataset="RRBS-ENC"),
+                   data.frame(rrbs.ef,dataset="RRBS-ES"),
                    data.frame(wgbs.ef,dataset="WGBS-BLUE"))
 str(eval.all)
 
@@ -142,8 +141,8 @@ all <- p +  theme(legend.position="bottom",legend.title = element_blank(), axis.
            axis.title = element_text(size=7), legend.key.size = unit(0.8,"line")) +
   scale_x_continuous(breaks=as.numeric(names(res.list))) + facet_grid (dist ~ dataset)
 
-ggsave(file=file.path(resultsDir,"Fig4.jaccard.simulations.facets.png"), all, width = 20, height = 16, units = "cm")
-ggsave(file=file.path(resultsDir,"Fig4.jaccard.simulations.facets.pdf"), all, width = 20, height = 16, units = "cm")
+ggsave(file=file.path(resultsDir,"Fig3.jaccard.simulations.facets.png"), all, width = 20, height = 16, units = "cm")
+ggsave(file=file.path(resultsDir,"Fig3.jaccard.simulations.facets.pdf"), all, width = 20, height = 16, units = "cm")
 
 #faig subset de 0 a 30
 eval.all.0.30 <- eval.all[eval.all$N %in% c(3,5,10,30),]
@@ -190,14 +189,14 @@ for (i in 1:6) { #transposo per a poder-ho posar com interessa, doncs voldré pl
   evals.GSE11.n[[i]] <- t(models.eval(models=res.list[[i]][[3]], dml.r=100,alpha=0.05, adjust=TRUE))
 }
 
-load(file=file.path(RRBS216_data,"simulated.models.list.RData"))
-evals.RRBS216.s <- NULL
-evals.RRBS216.b <- NULL
-evals.RRBS216.n <- NULL
+load(file=file.path(RRBS188_data,"simulated.models.list.RData"))
+evals.RRBS.s <- NULL
+evals.RRBS.b <- NULL
+evals.RRBS.n <- NULL
 for (i in 1:6) { #transposo per a poder-ho posar com interessa, doncs voldré plotar index
-  evals.RRBS216.s[[i]] <- t(models.eval(models=res.list[[i]][[1]], dml.r=100,alpha=0.05, adjust=TRUE))
-  evals.RRBS216.b[[i]] <- t(models.eval(models=res.list[[i]][[2]], dml.r=100,alpha=0.05, adjust=TRUE))
-  evals.RRBS216.n[[i]] <- t(models.eval(models=res.list[[i]][[3]], dml.r=100,alpha=0.05, adjust=TRUE))
+  evals.RRBS.s[[i]] <- t(models.eval(models=res.list[[i]][[1]], dml.r=100,alpha=0.05, adjust=TRUE))
+  evals.RRBS.b[[i]] <- t(models.eval(models=res.list[[i]][[2]], dml.r=100,alpha=0.05, adjust=TRUE))
+  evals.RRBS.n[[i]] <- t(models.eval(models=res.list[[i]][[3]], dml.r=100,alpha=0.05, adjust=TRUE))
 }
 
 load(file=file.path(WGBS81_data,"simulated.models.list.RData"))
@@ -212,11 +211,11 @@ for (i in 1:6) { #transposo per a poder-ho posar com interessa, doncs voldré pl
 
 create.table <- function (n){
   tab.s <-cbind(evals.GSE50.s[[n]],evals.GSE11.s[[n]],
-          evals.RRBS216.s[[n]],evals.WGBS81.s[[n]])
+          evals.RRBS.s[[n]],evals.WGBS81.s[[n]])
   tab.b <-cbind(evals.GSE50.b[[n]],evals.GSE11.b[[n]],
-                evals.RRBS216.b[[n]],evals.WGBS81.b[[n]])
+                evals.RRBS.b[[n]],evals.WGBS81.b[[n]])
   tab.n <-cbind(evals.GSE50.n[[n]],evals.GSE11.n[[n]],
-                evals.RRBS216.n[[n]],evals.WGBS81.n[[n]])
+                evals.RRBS.n[[n]],evals.WGBS81.n[[n]])
   tab <- rbind(tab.s,tab.b,tab.n)
   rownames(tab) <- recode(rownames(tab),  p.b="beta", p.binf="beta.inf",p.s="simplex",
                                               p.sinf="simplex.inf", p.n="normal", p.l="logistic",

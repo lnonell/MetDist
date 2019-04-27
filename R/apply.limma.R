@@ -1,3 +1,4 @@
+#header for package
 apply.limma <- function(cpgs, cond){
   #first transform to M's
   cpgs.M <- log2(cpgs/(1-cpgs))

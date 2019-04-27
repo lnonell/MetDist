@@ -1,8 +1,9 @@
 #Figure 5 per substituir els Venn
 #KaryoplotR with results, all genome and zoom in chrX
+#faig un Circos (al final!). Queda millor que el KaryoplotR. A veure què diu el JR
 
 #header amb tot
-source("D:/Doctorat/Simplex/R/Figures.HeaderScript.R")
+source("D:/Doctorat/Simplex/MetDist/R/Figures.HeaderScript.R")
 
 load(file=file.path(GSE50660_data,"betadata.models.adj.p.anot.sex.RData")) #per si de cas
 
@@ -155,3 +156,156 @@ dev.off()
 #   fn.chrx(beta.models.adj.p.anot)
 # dev.off()
 
+kp <- plotKaryotype(genome="hg19", plot.type=1)
+kpAddLabels(kp,label.margin=-0.5, labels=rep(paste0("test",1:24),24)) #podria sumaritzar així...
+
+#potser podria provar amb un circos
+library(OmicCircos)
+#he de fer 6 tracks per data set
+
+library(scales)
+colors <- hue_pal()(6)
+
+fn.generate.tracks <- function(beta.models.adj.p.anot,p.th=0.05){
+  #preparo dades
+  colnms <- c("chr","Start","End","Value")
+  df4kar <- beta.models.adj.p.anot[,c("chr","pos","p.b","p.s","p.n","p.l","p.q","p.limma")]
+  track<-list(NA)
+  #no se pq a gse11 hi ha alguns que no tenen chr
+  track[[1]] <- df4kar[!is.na(df4kar$p.b) & !is.na(df4kar$chr) & df4kar$p.b<p.th,c("chr","pos","pos","p.b")]
+  track[[2]] <- df4kar[!is.na(df4kar$p.s) & !is.na(df4kar$chr) & df4kar$p.s<p.th,c("chr","pos","pos","p.s")]
+  track[[3]] <- df4kar[!is.na(df4kar$p.n) & !is.na(df4kar$chr) & df4kar$p.n<p.th,c("chr","pos","pos","p.n")]
+  track[[4]] <- df4kar[!is.na(df4kar$p.l) & !is.na(df4kar$chr) & df4kar$p.l<p.th,c("chr","pos","pos","p.l")]
+  track[[5]] <- df4kar[!is.na(df4kar$p.q) & !is.na(df4kar$chr) & df4kar$p.q<p.th,c("chr","pos","pos","p.q")]
+  track[[6]] <- df4kar[!is.na(df4kar$p.limma) & !is.na(df4kar$chr) & df4kar$p.limma<p.th,c("chr","pos","pos","p.limma")]
+  for (i in 1:6) colnames(track[[i]]) <- colnms
+  return(track)
+}
+fn.generate.tracks.X <- function(beta.models.adj.p.anot,p.th=0.05){
+  #preparo dades
+  colnms <- c("chr","Start","End","Value")
+  df4kar <- beta.models.adj.p.anot[,c("chr","pos","p.b","p.s","p.n","p.l","p.q","p.limma")]
+  track<-list(NA)
+  #no se pq a gse11 hi ha alguns que no tenen chr
+  track[[1]] <- df4kar[!is.na(df4kar$p.b) & !is.na(df4kar$chr) & df4kar$p.b<p.th & df4kar$chr=="chrX",c("chr","pos","pos","p.b")]
+  track[[2]] <- df4kar[!is.na(df4kar$p.s) & !is.na(df4kar$chr) & df4kar$p.s<p.th & df4kar$chr=="chrX",c("chr","pos","pos","p.b")]
+  track[[3]] <- df4kar[!is.na(df4kar$p.n) & !is.na(df4kar$chr) & df4kar$p.n<p.th & df4kar$chr=="chrX",c("chr","pos","pos","p.b")]
+  track[[4]] <- df4kar[!is.na(df4kar$p.l) & !is.na(df4kar$chr) & df4kar$p.l<p.th & df4kar$chr=="chrX",c("chr","pos","pos","p.b")]
+  track[[5]] <- df4kar[!is.na(df4kar$p.q) & !is.na(df4kar$chr) & df4kar$p.q<p.th & df4kar$chr=="chrX",c("chr","pos","pos","p.b")]
+  track[[6]] <- df4kar[!is.na(df4kar$p.limma) & !is.na(df4kar$chr) & df4kar$p.limma<p.th & df4kar$chr=="chrX",c("chr","pos","pos","p.b")]
+  for (i in 1:6) colnames(track[[i]]) <- colnms
+  return(track)
+}
+
+
+
+p.th=10^-8
+load(file=file.path(GSE50660_data,"betadata.models.adj.p.anot.sex.RData"))   
+track.gse50 <- fn.generate.tracks(beta.models.adj.p.anot,p.th=p.th)
+track.gse50.X <- fn.generate.tracks.X(beta.models.adj.p.anot,p.th=p.th)
+
+load(file=file.path(GSE116339_data,"betadata.models.adj.p.anot.sex.RData")) 
+track.gse11 <- fn.generate.tracks(beta.models.adj.p.anot,p.th=p.th)
+track.gse11.X <- fn.generate.tracks.X(beta.models.adj.p.anot,p.th=p.th)
+
+load(file=file.path(RRBS188_data,"rnb.meth2comp.models.withlimma.RData"))
+annot <- rownames(rnb.meth2comp.models.withlimma)
+cpg_chr <- sapply(strsplit(annot,split="_"),function(x) x[1])
+cpg_pos <- sapply(strsplit(annot,split="_"),function(x) x[2])
+cpg_type <- sapply(strsplit(annot,split="_"),function(x) x[3])
+beta.models.adj.p.anot <- data.frame(rnb.meth2comp.models.withlimma,chr=cpg_chr,pos=as.numeric(cpg_pos))
+track.rrbs <- fn.generate.tracks(beta.models.adj.p.anot,p.th=p.th)
+track.rrbs.X <- fn.generate.tracks.X(beta.models.adj.p.anot,p.th=p.th)
+
+load(file=file.path(WGBS81_data,"rnb.meth2comp.models.withlimma.RData"))
+annot <- rownames(rnb.meth2comp.models.withlimma)
+cpg_chr <- sapply(strsplit(annot,split="_"),function(x) x[1])
+cpg_pos <- sapply(strsplit(annot,split="_"),function(x) x[2])
+cpg_type <- sapply(strsplit(annot,split="_"),function(x) x[3])
+beta.models.adj.p.anot <- data.frame(rnb.meth2comp.models.withlimma,chr=cpg_chr,pos=as.numeric(cpg_pos))
+track.wgbs <- fn.generate.tracks(beta.models.adj.p.anot,p.th=p.th)
+track.wgbs.X <- fn.generate.tracks.X(beta.models.adj.p.anot,p.th=p.th)
+
+#li dono el mateix nom: beta.models.adj.p.anot
+beta.models.adj.p.anot <- data.frame(rnb.meth2comp.models.withlimma,chr=cpg_chr,pos=as.numeric(cpg_pos))
+
+#revisar: 
+# 1.hg38/19: hg38 no hi és...
+# 2. Zoom chrx en una altra figura per composar
+# 3. Fons de cada color del data set
+# 4. provar de posar lletres (per cada dataset) o nums amb els totals
+# 5. el mateix a 10^-8
+
+#per a fer el bg de cada track
+ref <- UCSC.hg19.chr;
+ref.d <- c();
+for (chr in c(1:22, "X", "Y")){
+  chr.s <- paste0("chr", chr);
+  ref.i <- which(ref[,1]==chr.s);
+  ref.s <- ref[ref.i,];
+  ref.d <- rbind(ref.d, c(chr.s, 1, ref.s[length(ref.i),3]))
+}
+
+pdf(file=file.path(resultsDir,"Fig5.Circos.bg.10menys8.pdf")) #l'ultim dona error track.wgbs[[4]] no te elements
+pdf(file=file.path(resultsDir,"Fig5.Circos.bgwhite.10menys8.pdf")) #l'ultim dona error track.wgbs[[4]] no te elements
+# color del background de cada pista  
+#  col.bg <- c("darkseagreen1","lightskyblue1","rosybrown1","lightgoldenrod")
+  col.bg <- rep("white",4)
+  par(mar=c(2, 2, 2, 2));
+  plot(c(1,800), c(1,800), type="n", axes=F, xlab="", ylab="", main="");
+  circos(R=400, cir="hg19", W=4,   type="chr", print.chr.lab=T, scale=T);
+  circos(R=360, cir="hg19", W=25, mapping=ref.d, type="arc2",  B=F, col= col.bg[1], lwd=25, scale=F);
+  for (i in 1:6){
+    circos(R=390-5*i, cir="hg19", W=4,  mapping=track.gse50[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
+  }
+  circos(R=320, cir="hg19", W=25, mapping=ref.d, type="arc2",  B=F, col=col.bg[2], lwd=25, scale=F);
+  for (i in 1:6){
+    circos(R=350-5*i, cir="hg19", W=4,  mapping=track.gse11[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
+  }
+  circos(R=280, cir="hg19", W=25, mapping=ref.d, type="arc2",  B=F, col=col.bg[3], lwd=25, scale=F);
+  for (i in 1:6){
+    circos(R=310-5*i, cir="hg19", W=4,  mapping=track.rrbs[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
+  }
+  circos(R=240, cir="hg19", W=25, mapping=ref.d, type="arc2",  B=F, col=col.bg[4], lwd=25, scale=F);
+  for (i in c(1:3,5:6)){
+    circos(R=270-5*i, cir="hg19", W=4,  mapping=track.wgbs[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
+  }
+dev.off()  
+  
+#provo de fer el mateix a X, sembla que no es pot fer amb un zoom, està reportat...https://www.biostars.org/p/129864/
+# par(mar=c(2, 2, 2, 2));
+# plot(c(1,800), c(1,800), type="n", axes=F, xlab="", ylab="", main="");
+# zoom <- c("chr1", "chr1", 1,155270000, 0, 360);
+# circos(R=400, cir="hg19", W=4,   type="chr", print.chr.lab=T, scale=T, zoom=zoom);
+#data(UCSC.hg19) #aquesta ?s la bona, d'aqu? treurem X i Y i recalculem angle, per? sembla que no l'enten per tant no tinc clar que sigui aquest el bo
+data(UCSC.hg19.chr)
+chrX.i <- which(UCSC.hg19.chr[,1]=="chrX");
+chrX   <- UCSC.hg19.chr[chrX.i,];
+## segment data of chromosome X
+seg.c   <- segAnglePo(chrX, seg="chrX");
+
+
+pdf(file=file.path(resultsDir,"Fig5.Circos.X.bgwhite.10menys8.pdf")) #l'ultim dona error track.wgbs[[4]] no te elements
+pdf(file=file.path(resultsDir,"Fig5.Circos.X.bg.10menys8.pdf")) #l'ultim dona error track.wgbs[[4]] no te elements
+  col.bg <- c("darkseagreen1","lightskyblue1","rosybrown1","lightgoldenrod")
+  par(mar=c(2, 2, 2, 2))
+  plot(c(1,800), c(1,800), type="n", axes=FALSE, xlab="", ylab="");
+  circos(R=400, type="chr2", cir=seg.c, mapping=chrX, print.chr.lab=TRUE, W=4, scale=T);
+  
+  circos(R=360, cir=seg.c, W=25, mapping=chrX, type="arc2",  B=F, col= col.bg[1], lwd=25, scale=F);
+  for (i in 1:6){
+    circos(R=390-5*i, cir=seg.c, W=4,  mapping=track.gse50.X[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
+  }
+  circos(R=320, cir=seg.c, W=25, mapping=chrX, type="arc2",  B=F, col=col.bg[2], lwd=25, scale=F);
+  for (i in 1:6){
+    circos(R=350-5*i, cir=seg.c, W=4,  mapping=track.gse11.X[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
+  }
+  circos(R=280, cir=seg.c, W=25, mapping=chrX, type="arc2",  B=F, col=col.bg[3], lwd=25, scale=F);
+  for (i in 1:6){
+    circos(R=310-5*i, cir=seg.c, W=4,  mapping=track.rrbs.X[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
+  }
+  circos(R=240, cir=seg.c, W=25, mapping=chrX, type="arc2",  B=F, col=col.bg[4], lwd=25, scale=F);
+  for (i in c(1:3,5:6)){
+    circos(R=270-5*i, cir=seg.c, W=4,  mapping=track.wgbs.X[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
+  }
+dev.off()  

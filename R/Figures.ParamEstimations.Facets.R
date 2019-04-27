@@ -1,9 +1,12 @@
 #figures and tables from parameter estimates results
 #Suppfig 1: Correlations MOM MLE
 #Suggfig 2: Densities for the different parameters
+#Suppfig XX: betabi correls
+#PROVO Facets en les correls pero no va bé pq les escales son diferents per fila i per columna 
+#23/4/19 canvio RRBS216 a RRBS188
 
 #header amb tot
-source("D:/Doctorat/Simplex/R/Figures.HeaderScript.R")
+source("D:/Doctorat/Simplex/Metdist/R/Figures.HeaderScript.R")
 
 ######################################################################
 ########### Param estimations from all datasets  ###########
@@ -22,16 +25,14 @@ rm(est.params)
 load(file=file.path(GSE116339_data,"params.est.all.210219.RData"))
 est.params.gse11 <- est.params
 rm(est.params)
-#load(file=file.path(RRBS216_data,"params.est.all.120119.RData"))
-#load(file=file.path(RRBS216_data,"params.est.all.020319.RData"))
-load(file=file.path(RRBS216_data,"params.est.all.090319.RData"))
+#load(file=file.path(RRBS216_data,"params.est.all.090319.RData")) queda substituida per RRBS188
+load(file=file.path(RRBS188_data,"params.est.all.RData"))
 est.params.rrbs <- rnb.est.params
 rm(rnb.est.params)
 colnames(est.params.rrbs)
 #load(file=file.path(WGBS81_data,"params.est.all.RData"))
 #load(file=file.path(WGBS81_data,"params.est.all.020319.RData"))
 load(file=file.path(WGBS81_data,"params.est.all.090319.RData"))
-
 est.params.wgbs <- rnb.est.params
 rm(rnb.est.params)
 
@@ -52,12 +53,12 @@ apply(est.params.gse11, 2, range, na.rm=T)
 # [1,]   0.4155871 0.03858037 0.03000018 0.03858037 0.02997808
 # [2,]  67.3928258 0.96306584 0.42159840 0.96306584 0.42128783
 apply(est.params.rrbs, 2, range, na.rm=T)
-#         s.mle.mu s.mle.sig s.zoip.mu s.zoip.sig  b.mom.s1  b.mom.s2    b.mle.s1     b.mle.s2  binf.mle.s1  binf.mle.s2
-# [1,] 0.002024828  0.970169     0.001    0.00000 -0.248997 -0.248997   0.1288789    0.1288737 2.524122e-01 4.339461e-01
-# [2,] 0.996060266 63.633742     0.999   63.15065       Inf       Inf 131.9927638 2242.5682692 2.050425e+08 4.198953e+07
-#       n.mom.m  n.mom.sd      n.mle.m    n.mle.sd
-# [1,]       0 0.0000000 0.0002666667 0.002293953
-# [2,]       1 0.7071068 0.9972222222 0.500000000
+#       s.mle.mu s.mle.sig s.zoip.mu s.zoip.sig    b.mom.s1    b.mom.s2  b.mle.s1  b.mle.s2  binf.mle.s1  binf.mle.s2
+# [1,] 0.1103813  2.130462 0.1105003   2.130461 0.004347147 0.004347147 0.2082989 0.2084554 3.134143e-01 3.530879e-01
+# [2,] 0.8886737 19.721473 0.8885252  19.698741 3.120151619 3.094272926 3.5121126 3.0024909 1.589884e+08 1.589705e+08
+#     n.mom.m  n.mom.sd    n.mle.m n.mle.sd
+# [1,] 0.04166667 0.2000000 0.04166667 0.197478
+# [2,] 0.95833333 0.5080005 0.95833333 0.500000
 
 apply(est.params.wgbs, 2, range, na.rm=T)
 #       s.mle.mu s.mle.sig  s.zoip.mu s.zoip.sig  b.mom.s1  b.mom.s2  b.mle.s1  b.mle.s2  binf.mle.s1  binf.mle.s2
@@ -69,46 +70,46 @@ apply(est.params.wgbs, 2, range, na.rm=T)
 
 est.all <- rbind(data.frame(est.params.gse50,dataset="A450k-smoking"),
                   data.frame(est.params.gse11,dataset="EPIC-PBB"),
-                  data.frame(est.params.rrbs,dataset="RRBS-ENC"),
+                  data.frame(est.params.rrbs,dataset="RRBS-ES"),
                   data.frame(est.params.wgbs,dataset="WGBS-BLUE"))
 
 #hem de passar les columnes a files per blocks
-library(tidyr)
-
-#primers params (x a les grafiques)
-est.all1 <- est.all %>%  gather(model.p1,val1,c(s.mle.mu,s.mle.sig,b.mle.s1,b.mle.s2,n.mle.m,n.mle.sd))
-#segons params (y a les grafiques)
-est.all2 <- est.all %>%  gather(model.p2,val2,c(s.zoip.mu,s.zoip.sig,b.mom.s1,b.mom.s2,n.mom.m,n.mom.sd))
-
-est.all4facets <- data.frame(est.all1[,c("dataset","model.p1","val1")],
-                             est.all2[,c("model.p2","val2")])
-est.all4facets$model <- ifelse(est.all4facets$model.p1=="s.mle.mu","simplex mu",
-                               ifelse(est.all4facets$model.p1=="s.mle.sig","simplex sigma",
-                                      ifelse(est.all4facets$model.p1=="b.mle.s1","beta shape1",
-                                             ifelse(est.all4facets$model.p1=="b.mle.s2","beta shape2",
-                                                    ifelse(est.all4facets$model.p1=="n.mle.m","normal mean",
-                                                           ifelse(est.all4facets$model.p1=="n.mle.sd","normal sd",
-                                      NA))))))
-
-#comprovo
-table(est.all4facets$model.p1,est.all4facets$model.p2) #ara sí
-table(est.all4facets$model.p1,est.all4facets$model) # sí
-
-est.all4facets$model <- factor(est.all4facets$model,
-                         levels=c("simplex mu", "simplex sigma",
-                                  "beta shape1", "beta shape2",
-                                  "normal mean", "normal sd"))
+# library(tidyr)
+# 
+# #primers params (x a les grafiques)
+# est.all1 <- est.all %>%  gather(model.p1,val1,c(s.mle.mu,s.mle.sig,b.mle.s1,b.mle.s2,n.mle.m,n.mle.sd))
+# #segons params (y a les grafiques)
+# est.all2 <- est.all %>%  gather(model.p2,val2,c(s.zoip.mu,s.zoip.sig,b.mom.s1,b.mom.s2,n.mom.m,n.mom.sd))
+# 
+# est.all4facets <- data.frame(est.all1[,c("dataset","model.p1","val1")],
+#                              est.all2[,c("model.p2","val2")])
+# est.all4facets$model <- ifelse(est.all4facets$model.p1=="s.mle.mu","simplex mu",
+#                                ifelse(est.all4facets$model.p1=="s.mle.sig","simplex sigma",
+#                                       ifelse(est.all4facets$model.p1=="b.mle.s1","beta shape1",
+#                                              ifelse(est.all4facets$model.p1=="b.mle.s2","beta shape2",
+#                                                     ifelse(est.all4facets$model.p1=="n.mle.m","normal mean",
+#                                                            ifelse(est.all4facets$model.p1=="n.mle.sd","normal sd",
+#                                       NA))))))
+# 
+# #comprovo
+# table(est.all4facets$model.p1,est.all4facets$model.p2) #ara sí
+# table(est.all4facets$model.p1,est.all4facets$model) # sí
+# 
+# est.all4facets$model <- factor(est.all4facets$model,
+#                          levels=c("simplex mu", "simplex sigma",
+#                                   "beta shape1", "beta shape2",
+#                                   "normal mean", "normal sd"))
 
 #sembla que estan a escales molt diferents i per tant no es poden ajuntar!!!
 #tampoc veic com posar els colors 
 colors <- c("green4", "blue", "red2", "orange")
 
-#potser cal
-g <- ggplot(data = est.all4facets, aes(x = val1, y = val2)) + 
-  geom_point() +  geom_smooth(method = "lm",color="grey43" )
-h <- g + xlab("")+ylab("")  + facet_grid (model ~ dataset, scales="free")
-    
-ggsave(file=file.path(resultsDir,"Supp1.facets.test.kk.png"), h, width = 16, height = 20, units = "cm")
+# #potser cal
+# g <- ggplot(data = est.all4facets, aes(x = val1, y = val2)) + 
+#   geom_point() +  geom_smooth(method = "lm",color="grey43" )
+# h <- g + xlab("")+ylab("")  + facet_grid (model ~ dataset, scales="free")
+#     
+# ggsave(file=file.path(resultsDir,"Supp1.facets.test.kk.png"), h, width = 16, height = 20, units = "cm")
 
 ############## correlacions
 plot.cor <- function(df, x, y, color,tit){
@@ -166,8 +167,36 @@ all <- grid.arrange(arrangeGrob(s.c.m.gse50,s.c.m.gse11, s.c.m.rrbs, s.c.m.wgbs,
                                 n.c.s.gse50,n.c.s.gse11, n.c.s.rrbs, n.c.s.wgbs,  
                                 nrow=6,ncol=4), nrow=1)
 #all
-ggsave(file=file.path(resultsDir,"SuppFig1.correls.est.params.mle.datasets.png"), all, width = 16, height = 20, units = "cm")
-ggsave(file=file.path(resultsDir,"SuppFig1.correls.est.params.mle.datasets.pdf"), all, width = 16, height = 20, units = "cm")
+ggsave(file=file.path(resultsDir,"SuppFig1.correls.est.params.mle.datasets.230419.png"), all, width = 16, height = 20, units = "cm")
+ggsave(file=file.path(resultsDir,"SuppFig1.correls.est.params.mle.datasets.230419.pdf"), all, width = 16, height = 20, units = "cm")
+
+#############################################
+#Supp Figure XXX: el mateix per betabinomial
+#############################################
+
+load(file=file.path(RRBS188_data,"betabin.params.est.RData"))
+est.params.rrbs <- as.data.frame(rnb.betabin.est.params)
+rm(rnb.betabin.est.params)
+colnames(est.params.rrbs)
+
+load(file=file.path(WGBS81_data,"betabin.params.est.RData"))
+est.params.wgbs <- as.data.frame(rnb.betabin.est.params)
+rm(rnb.betabin.est.params)
+
+bb.c.m.rrbs <- plot.cor(df=est.params.rrbs, x=bb.mle.s1, y=bb.mom.s1, color=colors[3],tit="beta binomial s1")
+bb.c.s.rrbs <- plot.cor(df=est.params.rrbs, x=bb.mle.s2, y=bb.mom.s2, color=colors[3],tit="beta binomial s2")
+
+bb.c.m.wgbs <- plot.cor(df=est.params.wgbs, x=bb.mle.s1, y=bb.mom.s1, color=colors[4],tit="beta binomial s1")
+bb.c.s.wgbs <- plot.cor(df=est.params.wgbs, x=bb.mle.s2, y=bb.mom.s2, color=colors[4],tit="beta binomial s2")
+
+#ajuntem: ho guardare en png pq pdf pot ser una bogeria
+all.bb <- grid.arrange(arrangeGrob(bb.c.m.rrbs, bb.c.s.rrbs,    
+                                   bb.c.m.wgbs, bb.c.s.wgbs,  
+                                   nrow=2,ncol=2), nrow=1)
+#all
+ggsave(file=file.path(resultsDir,"SuppFig4.correls.est.params.betbin.mle.datasets.png"), all.bb, width = 16, height = 20, units = "cm")
+
+
 
 #############################################
 #Supp Figure 2: Density de les estimacions dels params
@@ -197,7 +226,7 @@ plot.dens <- function(df, param, ds, log2=F){
 #simplex
 df1 <- data.frame(ds="a450k-smoking",mu=est.params.gse50$s.mle.mu,sig=est.params.gse50$s.mle.sig)
 df2 <- data.frame(ds="aEPIC-PBB",mu=est.params.gse11$s.mle.mu,sig=est.params.gse11$s.mle.sig)
-df3 <- data.frame(ds="RRBS-ENC",mu=est.params.rrbs$s.mle.mu,sig=est.params.rrbs$s.mle.sig)
+df3 <- data.frame(ds="RRBS-ES",mu=est.params.rrbs$s.mle.mu,sig=est.params.rrbs$s.mle.sig)
 df4 <- data.frame(ds="WGBS-BLUE",mu=est.params.wgbs$s.mle.mu,sig=est.params.wgbs$s.mle.sig)
 df <- rbind(df1,df2,df3,df4)
 
@@ -207,7 +236,7 @@ s.s <- plot.dens(df, param=sig,ds=ds, log2 =T)
 #beta
 df1 <- data.frame(ds="a450k-smoking",s1=est.params.gse50$b.mle.s1,s2=est.params.gse50$b.mle.s2)
 df2 <- data.frame(ds="aEPIC-PBB",s1=est.params.gse11$b.mle.s1,s2=est.params.gse11$b.mle.s2)
-df3 <- data.frame(ds="RRBS-ENC",s1=est.params.rrbs$b.mle.s1,s2=est.params.rrbs$b.mle.s2)
+df3 <- data.frame(ds="RRBS-ES",s1=est.params.rrbs$b.mle.s1,s2=est.params.rrbs$b.mle.s2)
 df4 <- data.frame(ds="WGBS-BLUE",s1=est.params.wgbs$b.mle.s1,s2=est.params.wgbs$b.mle.s2)
 df <- rbind(df1,df2,df3,df4)
 
@@ -217,7 +246,7 @@ b.s <- plot.dens(df, param=s2,ds=ds, log2 =T)
 #normal
 df1 <- data.frame(ds="a450k-smoking",mu=est.params.gse50$n.mle.m,sd=est.params.gse50$n.mle.sd)
 df2 <- data.frame(ds="aEPIC-PBB",mu=est.params.gse11$n.mle.m,sd=est.params.gse11$n.mle.sd)
-df3 <- data.frame(ds="RRBS-ENC",mu=est.params.rrbs$n.mle.m,sd=est.params.rrbs$n.mle.sd)
+df3 <- data.frame(ds="RRBS-ES",mu=est.params.rrbs$n.mle.m,sd=est.params.rrbs$n.mle.sd)
 df4 <- data.frame(ds="WGBS-BLUE",mu=est.params.wgbs$n.mle.m,sd=est.params.wgbs$n.mle.sd)
 df <- rbind(df1,df2,df3,df4)
 
@@ -236,4 +265,4 @@ all <- grid.arrange(arrangeGrob(s.m + theme(legend.position="none"),
                                 n.s + theme(legend.position="none"),
                                 nrow=3,ncol=2),
                     mylegend, nrow=2,heights=c(10, 1))
-ggsave(file=file.path(resultsDir,"SuppFig2.est.params.mle.datasets.pdf"), all, width = 14, height = 20, units = "cm")
+ggsave(file=file.path(resultsDir,"SuppFig2.est.params.mle.datasets.230419.pdf"), all, width = 14, height = 20, units = "cm")

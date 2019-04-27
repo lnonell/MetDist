@@ -1,7 +1,11 @@
-#Figure 4: Global distribution for all data sets
+#Figure 4: Global distribution for all data sets and the variable sex
+#23/4/19 change variable, all to sex and canvio RRBS216 a RRBS188
+#Supp Figure 5: Venn diagram, en aquest cas no sé si té gaire sentit
+#Taula 3 amb els resultats...res.table per a cada data set
+#
 
 #header amb tot
-source("D:/Doctorat/Simplex/R/Figures.HeaderScript.R")
+source("D:/Doctorat/Simplex/MetDist/R/Figures.HeaderScript.R")
 
 g_legend<-function(a.gplot){
   tmp <- ggplot_gtable(ggplot_build(a.gplot))
@@ -39,11 +43,13 @@ load(file=file.path(GSE50660_data,"beta.filtered.RData")) #carrega les betes pre
 load(file=file.path(GSE50660_data,"pD.all.RData")) #phenoData
 betes.a <- beta
 rm(beta)
-smok <- pD.all$"smoking (0, 1 and 2, which represent never, former and current smokers):ch1"
-smok.b <- car::recode(smok,"2=1") #ajunto els que han fumat amb els que fumen. tot i que a nivell de metilació
-table(smok.b)
-#   0   1 
-cond.a <- as.factor(smok.b+1) #la fn està preparada per a que la cond sigui 1 i 2
+sex <- pD.all$`gender:ch1` 
+sex.r <- car::recode(sex,"'Female'=1;'Male'=2") #ajunto els que han fumat amb els que fumen. tot i que a nivell de metilació
+#això potser no t'e sentit pq volem veure què passa quan fumes i deixes de fumar, no?
+table(sex.r)
+#   1   2 
+# 137 327 
+cond.a <-as.factor(sex.r) #la fn està preparada per a que la cond sigui 1 i 2
 
 #########################
 #GSE116339
@@ -53,33 +59,34 @@ load(file=file.path(GSE116339_data,"pheno.RData"))
 dim(PM.f) #198711  
 betes.b <- as.matrix(PM.f)
 rm(PM.f)
-cond.b <- ifelse(pheno$`ln(totalpbb):ch1`>0,2,1)
-
+table(pheno$`gender:ch1`)
+# Female   Male 
+# 399    280 
+cond.b <- as.factor(car::recode(pheno$`gender:ch1`,"'Female'=1;'Male'=2"))
 
 hist(as.matrix(PM.f),breaks=seq(0,1,0.02),freq=FALSE,main="",xlab="")
 lines(density(as.matrix(PM.f[,cond.pbb==1]),na.rm=T),col="green")
 lines(density(as.matrix(PM.f[,cond.pbb==2]),na.rm=T),col="red")
 
 #########################
-#RRBS216
-load(file=file.path(RRBS216_data,"meth.betas.poquesNAs.RData"))
-dim(rnb.meth.f) #38003   216
-betes.c<-rnb.meth
-rm(rnb.meth)
+#RRBS188 enlloc de RRBS216
+load(file=file.path(RRBS188_data,"meth.betas.poquesNAs.RData"))
+dim(rnb.meth.f) # 479057    188
 
-samples.new <- read.table(file=file.path(RRBS216_data,"samples.new.csv"), sep="\t", header=T, stringsAsFactors = F)
-samples2comp <- samples.new[samples.new$lineage %in% c("endoderm","mesoderm"),]
-dim(samples2comp) #136
+samples <- read.table(file=file.path(RRBS188_data,"samples.csv"), sep=",", header=T, stringsAsFactors = F)
+samples2comp <- samples[samples$patient_sex %in% c("f","m"),]
+dim(samples2comp) #159
 
-betes.c <- rnb.meth.f[,samples2comp$sampleName]
+betes.c <- rnb.meth.f[,samples2comp$sample_id]
 rm(rnb.meth.f)
-cond.c <- as.factor(car::recode(samples2comp$lineage,"'endoderm'=1;'mesoderm'=2"))
-
+cond.c <- as.factor(car::recode(samples2comp$patient_sex,"'f'=1;'m'=2"))
+table(cond.c)
+# 1  2 
+# 63 96 
 #########################
 #WGBS81
 load(file=file.path(WGBS81_data,"meth.betas.poquesNAs.RData"))
 dim(rnb.meth.f) #213748     81
-rm(rnb.meth)
 samples <- read.delim(file=file.path(WGBS81_data,"samples.tsv"), stringsAsFactors=FALSE)
 
 samples2comp <- samples[samples$DONOR_SEX %in% c("Female","Male"),]
@@ -92,7 +99,7 @@ colors <- c("green4", "blue", "red2", "orange")
 col.lines<-c("brown","mediumorchid2")
 # col.lines<-c("green","red")
 #FIGURA: SI NO LA VULL COLOURED TREURE ELS BORDERS I TORNAR A POSAR EL RED GREEN COM A col.lines
-pdf(file=file.path(resultsDir,"Fig4.datasetsdist.coloured.pdf"))
+pdf(file=file.path(resultsDir,"Fig4.datasetsdist.coloured.230419.pdf"))
   par(mfrow=c(2,2))
   hist(betes.a,breaks=seq(0,1,0.05),freq=FALSE,main="",xlab="", border=colors[1])
     lines(density(betes.a[,cond.a==1],na.rm=T),col=col.lines[1])
@@ -206,42 +213,40 @@ venn5D_betamodels <-function(beta.models.adj.p,file=file.path(resultsDir,"Venn.G
 }
 
 #GSE50660
-load(file=file.path(GSE50660_data,file="betadata.models.withlimma.RData"))
+load(file=file.path(GSE50660_data,file="betadata.models.sex.withlimma.RData"))
 head(beta.models.withlimma)
 beta.models.adj.p <- as.data.frame(apply(beta.models.withlimma,2,p.adjust))
 #i ara selecciono els params que vull plotar
 to.plot <-beta.models.adj.p[,c("p.s","p.b","p.n","p.q","p.limma")]
-venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.GSE50.smoking.pdf"))
+venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.GSE50.sex.230419.pdf"))
 
 #GSE116339
-load(file=file.path(GSE116339_data,file="betadata.models.withlimma.pbb.RData"))
+load(file=file.path(GSE116339_data,file="betadata.models.sex.withlimma.RData"))
 head(beta.models.withlimma)
 beta.models.adj.p <- as.data.frame(apply(beta.models.withlimma,2,p.adjust))
 to.plot <-beta.models.adj.p[,c("p.s","p.b","p.n","p.q","p.limma")]
-venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.GSE116339.pbb.pdf"))
+venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.GSE116339.sex.230419.pdf"))
 
-#RRBS216
-load(file=file.path(RRBS216_data,file="rnb.meth2comp.lineage.models.withlimma.RData")) 
-#ccarrega objecte rnb.meth2comp.lineage.models
+#RRBS188 enlloc de RRBS216
+load(file=file.path(RRBS188_data,file="rnb.meth2comp.models.withlimma.RData")) 
+head(rnb.meth2comp.models.withlimma)
 #li poso el mateix nom i així ho aprofito tot!
-beta.models.adj.p <- as.data.frame(apply(rnb.meth2comp.lineage.models.withlimma,2,p.adjust))
+beta.models.adj.p <- as.data.frame(apply(rnb.meth2comp.models.withlimma,2,p.adjust))
 to.plot <-beta.models.adj.p[,c("p.s","p.b","p.n","p.q","p.limma")]
-
-venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.RRBS216.lineage.pdf"))
-
-#RRBS216
-load(file=file.path(RRBS216_data,file="rnb.meth2comp.lineage.models.withlimma.RData")) 
-#ccarrega objecte rnb.meth2comp.lineage.models
-#li poso el mateix nom i així ho aprofito tot!
-beta.models.adj.p <- as.data.frame(apply(rnb.meth2comp.lineage.models.withlimma,2,p.adjust))
-to.plot <-beta.models.adj.p[,c("p.s","p.b","p.n","p.q","p.limma")]
-venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.RRBS216.lineage.pdf"))
+venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.RRBS188.sex.230419.pdf"))
 
 #WGBS81
 load(file=file.path(WGBS81_data,file="rnb.meth2comp.models.withlimma.RData")) 
+head(rnb.meth2comp.models.withlimma)
 #ccarrega objecte rnb.meth2comp.lineage.models
 #li poso el mateix nom i així ho aprofito tot!
 beta.models.adj.p <- as.data.frame(apply(rnb.meth2comp.models.withlimma,2,p.adjust))
 to.plot <-beta.models.adj.p[,c("p.s","p.b","p.n","p.q","p.limma")]
-venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.WGBS81.lineage.pdf"))
+venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.WGBS81.sex.230419.pdf"))
+
+########################################################################################
+######### Table 3: Comparacions de cada dataset: res.table at FDR 0.05 per chr     #####
+########################################################################################
+
+save(res.table,file="betadata.models.sex.res.table.RData")
 

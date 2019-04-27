@@ -2,7 +2,7 @@
 #I will create the same but adding beta binomial for NGS
 
 #header amb tot
-source("D:/Doctorat/Simplex/R/Figures.HeaderScript.R")
+source("D:/Doctorat/Simplex/MetDist/R/Figures.HeaderScript.R")
 
 g_legend<-function(a.gplot){
   tmp <- ggplot_gtable(ggplot_build(a.gplot))
@@ -58,11 +58,11 @@ load(file=file.path(GSE116339_data,"best.dist.all.RData"))
 b <- aic.plot(best.dist.all,tit="B")
 b
 
-load(file=file.path(RRBS216_data,"best.dist.all.filtered.RData"))
+load(file=file.path(RRBS188_data,"best.dist.all.filtered.RData"))
 c <- aic.plot(best.dist.all,tit="C")
 c
 
-load(file=file.path(RRBS216_data,"best.dist.betabin.filtered.RData"))
+load(file=file.path(RRBS188_data,"best.dist.betabin.filtered.RData"))
 c.bb <- aic.bb.plot(best.dist.all,best.dist.all.betabin,tit="C")
 c.bb
 
@@ -84,8 +84,8 @@ ga <- grid.arrange(arrangeGrob(a + theme(legend.position="none"), #potser treure
                                d + theme(legend.position="none"), 
                                nrow=2),
                    mylegend, nrow=2,heights=c(10, 1))
-dev.off()
-ggsave(file=file.path(resultsDir,"Fig2.modelest.datasets.pdf"), ga, width = 14, height = 14, units = "cm")
+#dev.off()
+ggsave(file=file.path(resultsDir,"Fig2.modelest.datasets.270419.pdf"), ga, width = 14, height = 14, units = "cm")
 
 
 #i ara la mateixa però amb la betabinomial per NGS
@@ -96,5 +96,5 @@ ga <- grid.arrange(arrangeGrob(a + theme(legend.position="none"), #potser treure
                                d.bb + theme(legend.position="none"), 
                                nrow=2),
                    mylegend, nrow=2,heights=c(10, 1))
-dev.off()
-ggsave(file=file.path(resultsDir,"Fig2.modelest.datasets.betabin.pdf"), ga, width = 14, height = 14, units = "cm")
+#dev.off()
+ggsave(file=file.path(resultsDir,"Fig2.modelest.datasets.betabin.270419.pdf"), ga, width = 14, height = 14, units = "cm")

@@ -17,7 +17,7 @@ setwd(workingDir)
 #2.905.277      81 moltes més files que la resta, a veure si puc fer l'anàlisi!
 
 #load(file="rnb.covg.RData")
-samples <- read.delim("D:/Doctorat/Simplex/Data/WGBS_81_Bueprint/samples.tsv", stringsAsFactors=FALSE)
+samples <- read.delim("D:/Doctorat/Simplex/MetDist/Data/WGBS_81_Bueprint/samples.tsv", stringsAsFactors=FALSE)
 dim(samples) # 81 52
 
 # str(samples)
@@ -147,7 +147,7 @@ table(rownames(rnb.meth.f)==rownames(rnb.covg.f)) #just in case:TRUE
 ####################### 1.Estimate params for each distribution #############
 #############################################################################
 #necessary functions
-source(file=file.path("D:/Doctorat/Simplex/R","SimulationFunctions.R")) #carrego directament la fn est.betabin.params
+source(file=file.path("D:/Doctorat/Simplex/MetDist/R","SimulationFunctions.R")) #carrego directament la fn est.betabin.params
 library(doParallel)
 library(foreach)
 
@@ -484,7 +484,7 @@ load(file=file.path("best.dist.all.filtered.RData"))
 #en aquest cas li hem de passar els reads rnb.all
 N=nrow(rnb.meth.f)
 t1 <- Sys.time()
-cl <- makeCluster(3,type="PSOCK",outfile="output.txt") #poso només 1 pq està processant l'altre
+cl <- makeCluster(6,type="PSOCK",outfile="output.txt") #poso només 1 pq està processant l'altre
 registerDoParallel(cl)
 best.dist.all.betabin<- foreach(i=1:N,.combine=rbind, .packages=c("VGAM","fitdistrplus")) %dopar% {
   xi <- rnb.all.f[i,]
@@ -493,10 +493,10 @@ best.dist.all.betabin<- foreach(i=1:N,.combine=rbind, .packages=c("VGAM","fitdis
 }
 stopCluster(cl)
 t2 <- Sys.time()
-t2-t1 #11.63436 hours 3 cores
+t2-t1 #7.573625 hours 6 cores
 
 head(best.dist.all.betabin) #moltes NAs
-#save(best.dist.all.betabin,file=file.path("best.dist.betabin.filtered.RData"))
+save(best.dist.all.betabin,file=file.path("best.dist.betabin.filtered.RData"))
 #load(file=file.path("best.dist.betabin.filtered.RData"))
 
 
