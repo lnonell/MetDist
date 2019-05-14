@@ -1,4 +1,5 @@
 #27/4/19 Estudi de l'efecte de la normalització de les dades en les distribucions
+# supp figure 5 i supp figure 6
 #les dades les carrego al cluster des dels fitxers idat que he baixat de GEO de nou
 #al cluster he 
 # 1. Normalitzat el RGSet que carrega amb els 6 metodes:
@@ -11,6 +12,9 @@
 # 2. Eliminat SNPs
 # 3. Extret i guardat les betes resultants de cada normalització
 # ara les he de filtrar aquí igual que les originals i mirar les distribucions
+# BESTDIST generades al cluster
+#12/05/19: no canvia res, ho deixo com estava, D:\Doctorat\Simplex\MetDist\Data\Summary_OLD
+# IMPORTANT: si cal modfiicar res caldrà canviar els directoris
 
 library(GEOquery)
 library(minfi)
@@ -92,5 +96,73 @@ cor.test(RSet.fn.b.f,RSet.n.b.f) #0.9910817
 
 cor.test(RSet.s.b.f,RSet.n.b.f) #0.9767127 
 
+########################################################
+################ BEST DIST Supp figure 6 
+#la mateixa fn que a Figures.BestDist.R
+g_legend<-function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)}
+
+colors <- c("#E69F00", "#56B4E9", "#999999")
+
+#
+aic.plot <- function(best.dist.all,tit="A"){
+  ll <- nrow(best.dist.all)
+  aic.plot <- data.frame(x=1:ll,aic=best.dist.all[,1], model="simplex")
+  aic.plot <- rbind(aic.plot,
+                    data.frame(x=1:ll,aic=best.dist.all[,2], model="beta"),
+                    data.frame(x=1:ll,aic=best.dist.all[,3], model="normal"))
+  aic.plot$model <- factor(aic.plot$model,levels=c("simplex","beta","normal")) #aixo no estava a la fn original!
+  
+  
+  p <-ggplot(aic.plot) + geom_smooth(aes(x=x, y=aic, color=model)) + xlab("CpG")+ ylab("AIC")+
+    theme(legend.position="bottom",legend.title = element_blank(), axis.title.x = element_blank(),
+          axis.text.x = element_text(size=7,angle=45), axis.text.y = element_text(size=8),
+          axis.title = element_text(size=8), legend.key.size = unit(0.8,"line"))+
+    scale_color_manual(values=colors) + ggtitle(tit)
+  p
+}
+
+#ara les dades, grades al cluster
+load(file=file.path(GSE116339_data,"best.dist.r.RData"))
+r <- aic.plot(best.dist.r,tit="A")
+r
+
+load(file=file.path(GSE116339_data,"best.dist.i.RData"))
+i <- aic.plot(best.dist.i,tit="B")
+i
+
+load(file=file.path(GSE116339_data,"best.dist.q.RData"))
+q <- aic.plot(best.dist.q,tit="C")
+q
+
+load(file=file.path(GSE116339_data,"best.dist.fn.RData"))
+fn <- aic.plot(best.dist.fn,tit="D")
+fn
+
+load(file=file.path(GSE116339_data,"best.dist.s.RData"))
+s <- aic.plot(best.dist.s,tit="E")
+s
+
+load(file=file.path(GSE116339_data,"best.dist.n.RData"))
+n <- aic.plot(best.dist.n,tit="F")
+n
+
+#per a tenir una única llegenda
+mylegend<-g_legend(r)
+
+#png(file=file.path(resultsDir,"Fig2.modelest.datasets.png"), width=480, height=480,res=100) #param res és l'important!!
+ga <- grid.arrange(arrangeGrob(r + theme(legend.position="none"), #potser treure això de la legend??
+                               i + theme(legend.position="none"),
+                               q + theme(legend.position="none"),
+                               fn + theme(legend.position="none"), 
+                               s + theme(legend.position="none"), 
+                               n + theme(legend.position="none"),
+                               nrow=3),
+                   mylegend, nrow=2,heights=c(10, 1))
+#dev.off()
+ggsave(file=file.path(resultsDir,"SuppFig6.GSE116339.norm.bestdist.pdf"), ga, width = 14, height = 14, units = "cm")
 
 

@@ -10,8 +10,15 @@
 # best.dist.all.filtered.RData
 # simulated.cpgs.list.RData
 # simulated.models.list.RData
+# 1/5/19 
+# les simulated, com que a simplex inflated donaven tot NAs, 
+# les he corregut aquí al portàtil eliminant el p.sinf.gamlss i canvio la fn que sumaritza en taules
+# 5/5/19 filtro les que tenen poc coverage (seguint consells de l0article del mètode MACAU)
+# aixo es l'utlim que faig abans de crear RRBS188_ANAL
+# 12/5/19 poso els rownames dels objectes rnb.est.params, rnb.betabin.est.params i best.dist.all.betabin
+# per a poder fer el subsetting des de RRBS_188_ANAL.R
 
-workingDir<-"D:/Doctorat/Simplex/MetDist/Data/RRBS_188"
+workingDir<-"D:/Doctorat/Simplex/Data_OLD/RRBS_188"
 setwd(workingDir)
 
 samples <- read.table("samples.csv", sep=",", header=T, stringsAsFactors = F)
@@ -94,6 +101,30 @@ load(file="rnb.covg.poquesNAs.RData") #AQUESTES SON LA BASE DE L'ANALISI beta bi
 dim(rnb.covg.f)
 # 479057    188
 
+#miro coverage
+range(rnb.covg.f,na.rm=T) #0 5183
+covg.m <- apply(rnb.covg.f,1,mean)
+sum(is.na(covg.m)) #0
+(covg.m.q <-quantile(covg.m,probs = seq(0, 1, 0.05)))
+# 0%          5%         10%         15%         20%         25%         30%         35%         40% 
+# 0.1808511   0.5797872   0.8351064   1.1010638   1.3829787   1.6914894   2.0212766   2.3670213   2.7340426 
+# 45%         50%         55%         60%         65%         70%         75%         80%         85% 
+# 3.1223404   3.5319149   3.9946809   4.5106383   5.1010638   5.8031915   6.6436170   7.7180851   9.1755319 
+# 90%         95%        100% 
+# 11.3297872  15.4585106 717.7500000
+#és una kk!!
+#filtro les que tenen menys de 3
+rnb.covg.f <- rnb.covg.f[covg.m>3,]
+dim(rnb.covg.f)
+#270569    188
+save(rnb.covg.f,file="rnb.covg.poquesNAs.covg3.RData") 
+
+#i ara les altres
+rnb.meth.f <- rnb.meth.f[covg.m>3,] 
+dim(rnb.meth.f)
+#270569    188
+save(rnb.meth.f,file="meth.betas.poquesNAs.covg3.RData") 
+
 #i ara all
 rnb.all.f <- rnb.meth.f * rnb.covg.f
 
@@ -101,7 +132,7 @@ rnb.all.f <- rnb.meth.f * rnb.covg.f
 ####################### 1.Estimate params for each distribution #############
 #############################################################################
 #necessary functions
-source(file=file.path("D:/Doctorat/Simplex/R","SimulationFunctions.R")) #carrego directament la fn est.betabin.params
+source(file=file.path("D:/Doctorat/Simplex/MetDist/R","SimulationFunctions.R")) #carrego directament la fn est.betabin.params
 library(doParallel)
 library(foreach)
 
@@ -124,8 +155,10 @@ t2-t1 #3.827254 hours with 7 cores
 head(rnb.est.params)
 
 rnb.est.params <-as.data.frame(rnb.est.params)
-save(rnb.est.params,file="params.est.all.RData")
-#load(file="params.est.all.RData")
+#save(rnb.est.params,file="params.est.all.RData")
+load(file="params.est.all.RData")
+# rownames(rnb.est.params) <- rownames(rnb.meth.f)
+# save(rnb.est.params,file="params.est.all.RData")
 
 na.col <- function(x) sum(is.na(x))
 apply(rnb.est.params, 2, na.col)
@@ -161,7 +194,9 @@ dim(rnb.betabin.est.params)
 #guardo
 save(rnb.betabin.est.params,file="betabin.params.est.RData")
 load(file="betabin.params.est.RData")
-head(rnb.betabin.est.params)
+# head(rnb.betabin.est.params)
+# rownames(rnb.betabin.est.params) <- rownames(rnb.meth.f)
+# save(rnb.betabin.est.params,file="betabin.params.est.RData")
 
 
 ##########################################################
@@ -171,9 +206,9 @@ head(rnb.betabin.est.params)
 #enlloc de fer les simulacions per a 100 i dp per 10, creo una fn a SimulationFunctions i ho faig per varies Ns
 
 t1 <- Sys.time()
-simulations.all <- fn.simulations(est.params=rnb.est.params,cond.n= c(3,5,10,30,100,500),cores=3)
-t2 <- Sys.time()
-t2-t1 #3.1237159 hours 3 cores (afegint gamlss, abans era poc més de la mitat)
+simulations.all <- fn.simulations(est.params=rnb.est.params,cond.n= c(3,5,10,30,100,500),cores=7)
+t2 <- Sys.time() #Time difference of 35.89495 mins CHECK sinf!!!
+t2-t1 #
 
 load(file="simulated.cpgs.list.RData")
 length(cpgs.list) #6 un per cada cond.n
@@ -232,7 +267,7 @@ samples2comp <- samples[samples$patient_sex %in% c("f","m"),]
 dim(samples2comp) #159
 
 #load(file="meth.betas.poquesNAs.RData") 
-colnames(rnb.meth.f)
+#colnames(rnb.meth.f)
 
 rnb.meth2comp <- rnb.meth.f[,samples2comp$sample_id]
 dim(rnb.meth2comp)
@@ -272,6 +307,17 @@ covg <-rnb.covg.f[,samples2comp$sample_id]
 all[64385,] <- NA
 all[257324,] <- NA
 
+
+
+#primer miro overdispersion, he d'extraure coefs
+t1 <- Sys.time()
+rnb.overd<-fn.betabin.od.parallel(all=all,covg=covg, cond1=cond, cores=7)
+t2 <- Sys.time()
+t2-t1 # Time difference of 49.51469 mins
+head(rnb.overd)
+
+
+
 t1 <- Sys.time()
 rnb.meth2comp.betabin.model <- fn.models.betabin.parallel(all=all,covg=covg, cond1=cond, cores=7)
 t2 <- Sys.time()
@@ -282,6 +328,7 @@ rnb.meth2comp.betabin.models <- as.data.frame(rnb.meth2comp.betabin.models)
 table(rnb.meth2comp.betabin.models[rnb.meth2comp.betabin.models$p.bb<0.05,])
 
 save(rnb.meth2comp.betabin.models,file="rnb.meth2comp.betabin.models.RData")
+load(file="rnb.meth2comp.betabin.models.RData")
 
 all.models.sex <- cbind(rnb.meth2comp.models.withlimma,rnb.meth2comp.betabin.models)
 head(all.models.sex)
@@ -311,7 +358,7 @@ all.models.sex.adj.p.bb <- all.models.sex.adj.p[all.models.sex.adj.p[,10]<0.05 &
                                                   !is.na(all.models.sex.adj.p[,10]),]
 
 #extrec els resultats (fn a SimulationFunctions.R)
-res.chr.s <- res.chr(res=all.models.sex.adj.p)
+res.chr.s <- res.chr(res=all.models.sex.adj.p.s)
 res.chr.b <- res.chr(res=all.models.sex.adj.p.b)
 res.chr.sinf <- res.chr(res=all.models.sex.adj.p.sinf)
 res.chr.binf <- res.chr(res=all.models.sex.adj.p.binf)
@@ -336,69 +383,39 @@ require(plyr)
 res.table <- join_all(list(res.chr.s,
                            res.chr.b,
                            res.chr.sinf,
-                           #res.chr.binf,
+                           res.chr.binf,
                            res.chr.n,
-                           #res.chr.l,
-                           # res.chr.q,
-                          # res.chr.limma,
+                           res.chr.l,
+                            res.chr.q,
+                           res.chr.limma,
                            res.chr.bb), by = 'chr', type = 'full')
 
-res.table #aquí es una kk, simplex ho retorna tot, beta o simplex inflated
-#     chr    s  b sinf  n bb
-# 1   chr1 1779  9  176  4  1
-# 2  chr10  619 NA   74  4 NA
-# 3  chr11 6245 22  570 15 NA
-# 4  chr12  816  3   87  2 NA
-# 5  chr13  321  1   28  1 NA
-# 6  chr14  586  1   56  2 NA
-# 7  chr15  417  1   38  1 NA
-# 8  chr16 1655 11  152  4 NA
-# 9  chr17 1415  6  120  2 NA
-# 10 chr18  937  6   96  2 NA
-# 11 chr19 7971 36  732 27 NA
-# 12  chr2 1812 10  168  9 NA
-# 13 chr20  641  3   59 NA NA
-# 14 chr21  319  3   19 NA NA
-# 15 chr22  706  4   60  6 NA
-# 16  chr3  612  3   72  1 NA
-# 17  chr4  913  5   82  4 NA
-# 18  chr5 1486  6  177  2  1
-# 19  chr6 1883  9  209  8 NA
-# 20  chr7 1900  4  165  4 NA
-# 21  chr8  753  4   96  2 NA
-# 22  chr9 3773 20  522  8 NA
-# 23  chrX  437  4   23  2 NA
-# 24  chrY    7 NA   NA NA NA
-# 
-#hi ha molt poc a X miro quants n'hi ha d'inici
-res.chr(res=rnb.meth.f)
-
-#     chr Freq
-# 1   chr1 1779
-# 2  chr10  619
-# 3  chr11 6245
-# 4  chr12  816
-# 5  chr13  321
-# 6  chr14  586
-# 7  chr15  417
-# 8  chr16 1655
-# 9  chr17 1415
-# 10 chr18  937
-# 11 chr19 7971
-# 12  chr2 1812
-# 13 chr20  641
-# 14 chr21  319
-# 15 chr22  706
-# 16  chr3  612
-# 17  chr4  913
-# 18  chr5 1486
-# 19  chr6 1883
-# 20  chr7 1900
-# 21  chr8  753
-# 22  chr9 3773
-# 23  chrX  437
-# 24  chrY    7
-
+res.table 
+#     chr   s   b sinf binf   n   l   q limma   bb
+# 1   chr1 198 132  940   NA 158  NA  NA    NA   91
+# 2  chr10  88  72  483   NA  64  NA  NA    NA   37
+# 3  chr11  96  67  493   NA  89  NA  NA    NA   60
+# 4  chr12  92  63  467   NA  70  NA  NA    NA   47
+# 5  chr13  45  37  223   NA  32  NA  NA    NA   25
+# 6  chr14  55  46  338   NA  63  NA  NA    NA   22
+# 7  chr15  52  39  268   NA  35  NA  NA    NA   16
+# 8  chr16 141 106  639   NA 115  NA  NA    NA  106
+# 9  chr17 143 113  706   NA 115  NA  NA    NA   80
+# 10 chr18  38  21  190   NA  30  NA  NA    NA   25
+# 11 chr19 192 146  911   NA 152  NA  NA    NA  167
+# 12  chr2 110  95  638   NA  88  NA  NA    NA   52
+# 13 chr20  69  54  347   NA  57  NA  NA    NA   39
+# 14 chr21  34  21  167   NA  29  NA  NA    NA   31
+# 15 chr22  82  65  367   NA  69  NA  NA    NA   53
+# 16  chr3  81  52  407   NA  65  NA  NA    NA   32
+# 17  chr4  77  55  389   NA  58  NA  NA    NA   51
+# 18  chr5  98  67  494   NA  81  NA  NA    NA   44
+# 19  chr6  82  59  450   NA  56  NA  NA    NA   39
+# 20  chr7 117  89  610   NA 107  NA  NA    NA   81
+# 21  chr8  79  56  390   NA  54  NA  NA    NA   59
+# 22  chr9 114  78  514   NA  95  NA  NA    NA   54
+# 23  chrX 865 782 1852  518 658 214 309   644 9512
+# 24  chrY  10   6   19    4   7   2  NA     4   32
 save(res.table,file="betadata.models.sex.res.table.RData") #li poso el mateix nom que als arrays
 
 #DSS i la comparació amb els mateixos resultats però complet està més a baix
@@ -549,9 +566,11 @@ N=nrow(rnb.meth.f) #amb tots els valors, sense eliminar NAs!!!
 range(rnb.meth.f,na.rm=T)
 #  0 1 ara sí que hi ha 0's i 1's!
 
+#provo
+rnb.meth.f <- rnb.meth.f[covg.m>3,]
 e=0.001
 t1 <- Sys.time()
-cl <- makeCluster(3,type="PSOCK",outfile="output.txt") #poso només 1 pq està processant l'altre
+cl <- makeCluster(6,type="PSOCK",outfile="output.txt") #poso només 1 pq està processant l'altre
 registerDoParallel(cl)
 best.dist.all<- foreach(i=1:N,.combine=rbind, .packages=c("simplexreg","fitdistrplus")) %dopar% {
   b <- round(unlist(rnb.meth.f[i,]),4)
@@ -562,7 +581,7 @@ best.dist.all<- foreach(i=1:N,.combine=rbind, .packages=c("simplexreg","fitdistr
 }
 stopCluster(cl)
 t2 <- Sys.time()
-t2-t1 #1.31h 3cores
+t2-t1 #7.55 6cores
 
 head(best.dist.all, 10) 
 
@@ -589,7 +608,8 @@ t2-t1 #5.076667 hours
 
 #save(best.dist.all.betabin,file=file.path("best.dist.betabin.filtered.RData"))
 load(file=file.path("best.dist.betabin.filtered.RData"))
-
+rownames(best.dist.all.betabin) <- rownames(rnb.meth.f)
+#save(best.dist.all.betabin,file=file.path("best.dist.betabin.filtered.RData"))
 
 ################################# DSS #############################
 # aplico DSS, basat en beta-binomial, a veure que passa

@@ -1,8 +1,7 @@
 best.dist.betabin <- function(xi,ni){
-  #en ppi ni no ho necessito
   require(fitdistrplus)
   require(VGAM)
-  
+
   xi.prime <- round(xi[!is.na(xi)],0)
   ni.prime <- ni[!is.na(xi)]
   

@@ -6,9 +6,15 @@
 # ajuntades: D:\Doctorat\Simplex\Data\WGBS_81_Bueprint\rnb.meth.f.annot
 # basat en l'script de RRBS_216
 # faig el filtrar del coverage en base al filtrat del rnb.meth.f!
+# 5/5/19 filtro les que tenen poc coverage (seguint consells de l0article del mètode MACAU)
+# aixo es l'utlim que faig abans de crear RRBS188_ANAL
+# 12/5/19 poso els rownames dels objectes rnb.est.params, rnb.betabin.est.params i best.dist.all.betabin
+# per a poder fer el subsetting des de RRBS_188_ANAL.R
+
+
 
 #revisem els samples.csv
-workingDir<-"D:/Doctorat/Simplex/MetDist/Data/WGBS_81_Bueprint"
+workingDir<-"D:/Doctorat/Simplex/Data_OLD/WGBS_81_Bueprint"
 setwd(workingDir)
 
 #dades originals, dp de filtrar al cluster
@@ -139,7 +145,35 @@ dim(rnb.meth.f) #213748     81
 #save(rnb.covg.f,file="rnb.covg.poquesNAs.RData") 
 load(file="rnb.covg.poquesNAs.RData")
 dim(rnb.covg.f) #213748     81
+
+#Filtratge per coverage
+range(rnb.covg.f,na.rm=T) #0 4694
+covg.m <- apply(rnb.covg.f,1,mean)
+sum(is.na(covg.m)) #0
+(covg.m.q <-quantile(covg.m,probs = seq(0, 1, 0.05)))
+# 0%           5%          10%          15%          20%          25%          30%          35%          40% 
+# 0.4814815    3.3086420    7.4814815   12.3950617   17.1234568   21.4691358   25.7037037   29.6790123   33.5308642 
+# 45%          50%          55%          60%          65%          70%          75%          80%          85% 
+# 37.0740741   40.5679012   43.8641975   47.1481481   50.4814815   53.8518519   57.2962963   60.9876543   65.0000000 
+# 90%          95%         100% 
+# 69.8765432   76.9259259 1714.0123457 
+#és molt millor que RRBS188
+#filtro les que tenen menys de 3
+rnb.covg.f <- rnb.covg.f[covg.m>3,]
+dim(rnb.covg.f)
+#204073     81
+save(rnb.covg.f,file="rnb.covg.poquesNAs.covg3.RData") 
+
+#i ara les altres
+rnb.meth.f <- rnb.meth.f[covg.m>3,] 
+dim(rnb.meth.f)
+#204073     81
+save(rnb.meth.f,file="meth.betas.poquesNAs.covg3.RData") 
+
+
+
 #i ara all
+
 rnb.all.f <- rnb.meth.f * rnb.covg.f
 
 table(rownames(rnb.meth.f)==rownames(rnb.covg.f)) #just in case:TRUE
@@ -181,8 +215,11 @@ rnb.est.params <-as.data.frame(rnb.est.params)
 # load(file="params.est.all.RData") ##renombro withNAs!
 #save(rnb.est.params,file="params.est.all.020319.RData") #sense NAs!
 #save(rnb.est.params,file="params.est.all.050319.RData") #canviant e de 0.001 a 0.01
-save(rnb.est.params,file="params.est.all.090319.RData") #estaven malament agafades les NAs!
-load(file="params.est.all.RData")
+#save(rnb.est.params,file="params.est.all.090319.RData") #estaven malament agafades les NAs!
+load(file="params.est.all.090319.RData")
+# rownames(rnb.est.params) <- rownames(rnb.meth.f)
+# save(rnb.est.params,file="params.est.all.090319.RData") #estaven malament agafades les NAs!
+
 
 na.col <- function(x) sum(is.na(x))
 apply(rnb.est.params, 2, na.col)
@@ -284,6 +321,12 @@ hist(rnb.betabin.est.params[,5],breaks=20)
 dim(rnb.betabin.est.params)
 #guardo
 save(rnb.betabin.est.params,file="betabin.params.est.RData")
+load(file="betabin.params.est.RData")
+dim(rnb.betabin.est.params) #213748 
+rownames(rnb.betabin.est.params) <- rownames(rnb.meth.f)
+rnb.betabin.est.params <- as.data.frame(rnb.betabin.est.params)
+save(rnb.betabin.est.params,file="betabin.params.est.RData")
+
 
  
 #############################################################################
@@ -333,8 +376,60 @@ load(file="rnb.meth2comp.models.withlimma.RData")
 rnb.meth2comp.models <- rnb.meth2comp.models.withlimma
 
 ############# regressio betabinomial
+
 all <-rnb.all.f[,samples2comp$sampleName]
 covg <-rnb.covg.f[,samples2comp$sampleName]
+#potser hauria de mirar el coverage
+range(covg,na.rm=T) #0 4694
+hist(covg, breaks=20, xlim=c(0,100))
+covg.m <- apply(covg,1,mean)
+covg.m.q <-quantile(covg.m,probs = seq(0, 1, 0.05))
+# 0%           5%          10%          15%          20%          25%          30%          35% 
+#   0.4415584    3.1818182    7.1428571   11.8961039   16.5324675   20.8571429   25.0909091   29.1298701 
+# 40%          45%          50%          55%          60%          65%          70%          75% 
+#   32.9740260   36.6103896   40.1428571   43.4805195   46.8441558   50.2337662   53.6493506   57.1558442 
+# 80%          85%          90%          95%         100% 
+# 60.9220779   64.9870130   69.9610390   77.1253247 1737.3766234 
+plot(covg.m.q)
+
+#primer miro overdispersion, he d'extraure coefs
+t1 <- Sys.time()
+rnb.overd<-fn.betabin.od.parallel(all=all,covg=covg, cond1=cond, cores=7)
+t2 <- Sys.time()
+t2-t1 # Time difference of 25.00339 mins
+head(rnb.overd)
+
+#                     p.bb       phi.bb   phi.p.bb
+# chr1_24911_Shelf  0.7939309 4.761341e-09 1.00000000
+# chr1_27670_Shore  0.2895988 3.053907e-09 0.00000000
+# chr1_131246_Shelf 0.4870323 1.315675e-02 0.29316178
+# chr1_365202_Shelf 0.7083645 8.540767e-02 0.04102509
+# chr1_377228_Shelf 0.1706074 1.623966e-08 1.00000000
+# chr1_377236_Shelf 0.9627764 2.112750e-08 1.00000000
+# sembla que si phi es signif hi ha overdisp heterogeni entre els grups i sembla que són
+# els que tenen els coefs més alts
+
+#canvio el model per heterogeneous (dif overdisp per grup)
+t1 <- Sys.time()
+rnb.overd.cond<-fn.betabin.od.cond.parallel(all=all,covg=covg, cond1=cond, cores=1)
+t2 <- Sys.time()
+t2-t1 # 
+head(rnb.overd.cond)
+
+#canvio el model fixo sense overdisp
+t1 <- Sys.time()
+rnb.overd.cond.nood<-fn.betabin.od.cond.nood.parallel(all=all[1:100,],covg=covg[1:100,], cond1=cond, cores=1)
+t2 <- Sys.time()
+t2-t1 # 
+head(rnb.overd.cond.nood)
+
+#dif over, sense overd, igual overd, si que canvien les coses
+cbind(rnb.overd.cond,rnb.overd.cond.nood,rnb.overd[1:100,])
+cbind(rnb.overd.cond,rnb.overd)[1:20,]
+# el que hauria de fer és: si p de phi (phi.p.bb<0.05 agafar el nou p (de rnb.overd.cond) si no el de rnb.overd
+
+
+
 
 t1 <- Sys.time()
 rnb.meth2comp.betabin.models <- fn.models.betabin.parallel(all=all,covg=covg, cond1=cond, cores=6)
@@ -344,7 +439,8 @@ head(rnb.meth2comp.betabin.models)
 rnb.meth2comp.betabin.models <- as.data.frame(rnb.meth2comp.betabin.models)
 table(rnb.meth2comp.betabin.models[rnb.meth2comp.betabin.models$p.bb<0.05,])
 
-save(rnb.meth2comp.betabin.models,file="rnb.meth2comp.betabin.models.RData")
+#save(rnb.meth2comp.betabin.models,file="rnb.meth2comp.betabin.models.RData")
+load(file="rnb.meth2comp.betabin.models.RData")
 
 all.models.sex <- cbind(rnb.meth2comp.models.withlimma,rnb.meth2comp.betabin.models)
 head(all.models.sex)
@@ -374,7 +470,7 @@ all.models.sex.adj.p.bb <- all.models.sex.adj.p[all.models.sex.adj.p[,10]<0.05 &
                                                   !is.na(all.models.sex.adj.p[,10]),]
 
 #extrec els resultats (fn més a munt)
-res.chr.s <- res.chr(res=all.models.sex.adj.p)
+res.chr.s <- res.chr(res=all.models.sex.adj.p.s)
 res.chr.b <- res.chr(res=all.models.sex.adj.p.b)
 res.chr.sinf <- res.chr(res=all.models.sex.adj.p.sinf)
 res.chr.binf <- res.chr(res=all.models.sex.adj.p.binf)
@@ -406,31 +502,30 @@ res.table <- join_all(list(res.chr.s,
 
 res.table #molt bé la taula, bb mogollon i només a X
 #     chr     s    b  sinf binf    n  l    q limma   bb
-# 1   chr1 15227    2  2771   NA    7 NA   NA    NA   NA
-# 2  chr10  8778    1  2128   NA   NA NA   NA    NA   NA
-# 3  chr11  9627    2  1848   NA    1 NA    1    NA   NA
-# 4  chr12  7734    2  1786    1    2 NA    1     2   NA
-# 5  chr13  4856    1  1576   NA   NA NA   NA    NA   NA
-# 6  chr14  6365    2  1848   NA   NA NA   NA    NA   NA
-# 7  chr15  5519    2  1576   NA    2 NA   NA    NA   NA
-# 8  chr16  9807    5  1315   NA    4 NA   NA    NA   NA
-# 9  chr17 12501    1  1569   NA    1 NA   NA    NA   NA
-# 10 chr18  4751   NA  1445   NA   NA NA   NA    NA   NA
-# 11 chr19 16692    3  2076   NA    4 NA    4    NA   NA
-# 12  chr2 13298    1  3326   NA    1 NA   NA    NA   NA
-# 13 chr20  6203    2  1245   NA    1 NA   NA    NA    1
-# 14 chr21  4026   NA   345   NA   NA NA   NA    NA   NA
-# 15 chr22  5814    1   642   NA   NA NA    1    NA   NA
-# 16  chr3  6685   NA  1790   NA    2 NA   NA    NA   NA
-# 17  chr4  7414    1  2436   NA    1 NA   NA    NA   NA
-# 18  chr5 12476    2  3317   NA    1 NA   NA    NA   NA
-# 19  chr6  7782    1  2184   NA   NA NA   NA    NA   NA
-# 20  chr7 10616    4  2411   NA   NA NA   NA    NA   NA
-# 21  chr8  7729    1  1817   NA    1 NA   NA    NA   NA
-# 22  chr9  9383    3  1601   NA    2 NA    1    NA   NA
-# 23  chrX 20035 7798 12683 5661 5749  8 2025  6964 7091
-# 24  chrY   430   15    25    5    7 NA    1     3   NA
-
+# 1   chr1  694    2  2771   NA    7 NA   NA    NA   NA
+# 2  chr10  389    1  2128   NA   NA NA   NA    NA   NA
+# 3  chr11  547    2  1848   NA    1 NA    1    NA   NA
+# 4  chr12  314    2  1786    1    2 NA    1     2   NA
+# 5  chr13  296    1  1576   NA   NA NA   NA    NA   NA
+# 6  chr14  396    2  1848   NA   NA NA   NA    NA   NA
+# 7  chr15  468    2  1576   NA    2 NA   NA    NA   NA
+# 8  chr16  371    5  1315   NA    4 NA   NA    NA   NA
+# 9  chr17  430    1  1569   NA    1 NA   NA    NA   NA
+# 10 chr18  289   NA  1445   NA   NA NA   NA    NA   NA
+# 11 chr19  537    3  2076   NA    4 NA    4    NA   NA
+# 12  chr2  717    1  3326   NA    1 NA   NA    NA   NA
+# 13 chr20  320    2  1245   NA    1 NA   NA    NA    1
+# 14 chr21   73   NA   345   NA   NA NA   NA    NA   NA
+# 15 chr22  150    1   642   NA   NA NA    1    NA   NA
+# 16  chr3  313   NA  1790   NA    2 NA   NA    NA   NA
+# 17  chr4  405    1  2436   NA    1 NA   NA    NA   NA
+# 18  chr5  806    2  3317   NA    1 NA   NA    NA   NA
+# 19  chr6  548    1  2184   NA   NA NA   NA    NA   NA
+# 20  chr7  498    4  2411   NA   NA NA   NA    NA   NA
+# 21  chr8  352    1  1817   NA    1 NA   NA    NA   NA
+# 22  chr9  314    3  1601   NA    2 NA    1    NA   NA
+# 23  chrX 8276 7798 12683 5661 5749  8 2025  6964 7091
+# 24  chrY   10   15    25    5    7 NA    1     3   NA
 save(res.table,file="betadata.models.sex.res.table.RData") #li poso el mateix nom que als arrays
 
 #DSS i la comparació amb els mateixos resultats però complet està més a baix
@@ -496,15 +591,11 @@ t2 <- Sys.time()
 t2-t1 #7.573625 hours 6 cores
 
 head(best.dist.all.betabin) #moltes NAs
+# save(best.dist.all.betabin,file=file.path("best.dist.betabin.filtered.RData"))
+# load(file=file.path("best.dist.betabin.filtered.RData"))
+# rownames(best.dist.all.betabin) <- rownames(rnb.meth.f)
+# best.dist.all.betabin <- as.data.frame(best.dist.all.betabin)
 save(best.dist.all.betabin,file=file.path("best.dist.betabin.filtered.RData"))
-#load(file=file.path("best.dist.betabin.filtered.RData"))
-
-
-# #les afegeixo a les best.dist.all, serà un data.frame: VELL
-# best.dist.with.betabin <- data.frame(best.dist.all[,1:3],betabin.aic=best.dist.all.betabin[,1],
-#                                      best.dist.all[,4:6],betabin.ks.p=best.dist.all.betabin[,2])
-# save(best.dist.with.betabin,file=file.path("best.dist.with.betabin.RData"))
-# # load(file=file.path("best.dist.with.betabin.RData"))
 
 ###################################################################
 ################################# DSS #############################

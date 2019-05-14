@@ -1,10 +1,18 @@
-best.dist <- function(x){
+best.dist <- function(b){
   library(fitdistrplus)
   library(simplexreg) 
+  
+  #just in case values are not integer or something strange
+  b <- round(unlist(b),4)
+  #in this case we need to remove NAs
+  b.prime <-b[!is.na(b)]
+  e=0.01
+  x <- ifelse(b.prime==1, 1-e, ifelse(b.prime==0,0+e,b.prime))
+  
   mu <- mean(x,na.rm=T)
   var <- var(x,na.rm=T)
   
-  fit.s <- try(fitdist(x, distr=dsimplex, start=list(mu=0.5,sig=2),optim.method="Nelder-Mead"),TRUE) #no entenc pq falla amb les dades guardades!!
+  fit.s <- try(fitdist(x, distr=dsimplex, start=list(mu=0.5,sig=2),optim.method="Nelder-Mead"),TRUE) 
   if(class(fit.s)!="try-error")  s.aic <- fit.s$aic else s.aic=NA
   
   fit.b <- try(fitdist(x, distr=dbeta, start=list(shape1=mu,shape2=var)),TRUE) #aqta és del paquet fitdistrplus
@@ -26,4 +34,4 @@ best.dist <- function(x){
   v <- c(s.aic,b.aic,n.aic,s.ks,b.ks,n.ks)
   names(v) <- c("simplex.aic","beta.aic","normal.aic","simplex.ks.p","beta.ks.p","normal.ks.p")
   return(v)
-}
+  }

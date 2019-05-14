@@ -1,5 +1,6 @@
 #Figure 2: AIC for all data sets comparing simplex, beta and normal
 #I will create the same but adding beta binomial for NGS
+#11/05/19 ho actualitzo tot
 
 #header amb tot
 source("D:/Doctorat/Simplex/MetDist/R/Figures.HeaderScript.R")
@@ -58,19 +59,19 @@ load(file=file.path(GSE116339_data,"best.dist.all.RData"))
 b <- aic.plot(best.dist.all,tit="B")
 b
 
-load(file=file.path(RRBS188_data,"best.dist.all.filtered.RData"))
+load(file=file.path(RRBS188_data,"best.dist.all.RData"))
 c <- aic.plot(best.dist.all,tit="C")
 c
 
-load(file=file.path(RRBS188_data,"best.dist.betabin.filtered.RData"))
+load(file=file.path(RRBS188_data,"best.dist.betabin.RData"))
 c.bb <- aic.bb.plot(best.dist.all,best.dist.all.betabin,tit="C")
 c.bb
 
-load(file=file.path(WGBS81_data,"best.dist.all.filtered.RData"))
+load(file=file.path(WGBS81_data,"best.dist.all.RData"))
 d <- aic.plot(best.dist.all,tit="D")
 d
 
-load(file=file.path(WGBS81_data,"best.dist.betabin.filtered.RData"))
+load(file=file.path(WGBS81_data,"best.dist.betabin.RData"))
 d.bb <- aic.bb.plot(best.dist.all,best.dist.all.betabin,tit="D")
 d.bb
 
@@ -85,7 +86,7 @@ ga <- grid.arrange(arrangeGrob(a + theme(legend.position="none"), #potser treure
                                nrow=2),
                    mylegend, nrow=2,heights=c(10, 1))
 #dev.off()
-ggsave(file=file.path(resultsDir,"Fig2.modelest.datasets.270419.pdf"), ga, width = 14, height = 14, units = "cm")
+ggsave(file=file.path(resultsDir,"Fig2.modelest.datasets.110519.pdf"), ga, width = 14, height = 14, units = "cm")
 
 
 #i ara la mateixa però amb la betabinomial per NGS
@@ -97,4 +98,4 @@ ga <- grid.arrange(arrangeGrob(a + theme(legend.position="none"), #potser treure
                                nrow=2),
                    mylegend, nrow=2,heights=c(10, 1))
 #dev.off()
-ggsave(file=file.path(resultsDir,"Fig2.modelest.datasets.betabin.270419.pdf"), ga, width = 14, height = 14, units = "cm")
+ggsave(file=file.path(resultsDir,"Fig2.modelest.datasets.betabin.110519.pdf"), ga, width = 14, height = 14, units = "cm")
