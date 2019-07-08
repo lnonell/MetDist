@@ -13,6 +13,8 @@ load(file="pD.all.RData") #phenoData
 load(file="beta.filtered.RData") #carrega les betes preprocessades i filtrades que són les que farem servir aquí
 dim(beta) #125950    464
 
+range(beta) #[1] 0.006766852 0.994655391 non inflated
+
 #Condition to analyze
 sex <- pD.all$`gender:ch1` 
 
@@ -53,6 +55,11 @@ table(gse50660.best.dist[,1])
 # beta.aic  normal.aic simplex.aic 
 # 19737       32179       74034 
 #genial!!!
+table(gse50660.best.dist[,2])
+# beta.ks.p  normal.ks.p simplex.ks.p 
+# 19028        32252        74670 
+
+rbind(table(gse50660.best.dist[,1]),table(gse50660.best.dist[,2]))
 
 #############################################################################
 ####################### 2.Estimate params for each distribution #############

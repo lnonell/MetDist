@@ -7,6 +7,8 @@
 # 3 canvio el tamany a pptx per a 3,5 x 13 cada track (elimino nom chrX)
 # Deixo les altres proves comentades per si de cas
 
+#05/07/19 elimino la logística!!!
+
 #header amb tot
 source("D:/Doctorat/Simplex/MetDist/R/Figures.HeaderScript.R")
 
@@ -91,6 +93,35 @@ source("D:/Doctorat/Simplex/MetDist/R/Figures.HeaderScript.R")
 # }
 
 #1/5/19 ZOOM A X amb KaryoploteR, amb els density
+# fn.chrx<- function(beta.models.adj.p.anot,p.th=0.05,cex=0.6){
+#   library(karyoploteR)
+#   library(scales)
+#   colors <- hue_pal()(6)
+#   #deixo el cex tot i que no el faig servir per res
+#   e<-1e-10 #queden enganxats aqí pq hi ha molts 0's
+#   #preparo dades, necessitaré un granges amb start i end
+#   #ho converteixo directament
+#   df4kar <- beta.models.adj.p.anot[!is.na(beta.models.adj.p.anot$chr),c("chr","pos","p.b","p.s","p.n","p.l","p.q","p.limma")]
+#   #he d'eliminar els que tenen chr NA!
+# 
+#   df4kar.1 <- toGRanges(df4kar[!is.na(df4kar$p.b) & df4kar$p.b<p.th,c("chr","pos","pos","p.b")])
+#   df4kar.2 <- toGRanges(df4kar[!is.na(df4kar$p.s) & df4kar$p.s<p.th,c("chr","pos","pos","p.s")])
+#   df4kar.3 <- toGRanges(df4kar[!is.na(df4kar$p.n) & df4kar$p.n<p.th,c("chr","pos","pos","p.n")])
+#   df4kar.4 <- toGRanges(df4kar[!is.na(df4kar$p.l) & df4kar$p.l<p.th,c("chr","pos","pos","p.l")])
+#   df4kar.5 <- toGRanges(df4kar[!is.na(df4kar$p.q) & df4kar$p.q<p.th,c("chr","pos","pos","p.q")])
+#   df4kar.6 <- toGRanges(df4kar[!is.na(df4kar$p.limma) & df4kar$p.limma<p.th,c("chr","pos","pos","p.limma")])
+# 
+#   kp <- plotKaryotype(genome="hg19", plot.type=1,chromosomes=c("chrX"))
+#   kpPlotDensity(kp,data=df4kar.1, data.panel = 1,r0=0,r1=0.16,col=colors[1])
+#   kpPlotDensity(kp,data=df4kar.2, data.panel = 1,r0=0.17,r1=0.33,col=colors[2])
+#   kpPlotDensity(kp,data=df4kar.3, data.panel = 1,r0=0.34,r1=0.50,col=colors[3])
+#   kpPlotDensity(kp,data=df4kar.4, data.panel = 1,r0=0.51,r1=0.66,col=colors[4])
+#   kpPlotDensity(kp,data=df4kar.5, data.panel = 1,r0=0.67,r1=0.84,col=colors[5])
+#   kpPlotDensity(kp,data=df4kar.6, data.panel = 1,r0=0.85,r1=1,col=colors[6])
+# 
+# }
+
+#elimino logistica, he d'ajustar els tracks
 fn.chrx<- function(beta.models.adj.p.anot,p.th=0.05,cex=0.6){
   library(karyoploteR)
   library(scales)
@@ -99,24 +130,25 @@ fn.chrx<- function(beta.models.adj.p.anot,p.th=0.05,cex=0.6){
   e<-1e-10 #queden enganxats aqí pq hi ha molts 0's
   #preparo dades, necessitaré un granges amb start i end
   #ho converteixo directament
-  df4kar <- beta.models.adj.p.anot[!is.na(beta.models.adj.p.anot$chr),c("chr","pos","p.b","p.s","p.n","p.l","p.q","p.limma")]
+#  df4kar <- beta.models.adj.p.anot[!is.na(beta.models.adj.p.anot$chr),c("chr","pos","p.b","p.s","p.n","p.l","p.q","p.limma")]
+  df4kar <- beta.models.adj.p.anot[!is.na(beta.models.adj.p.anot$chr),c("chr","pos","p.b","p.s","p.n","p.q","p.limma")]
   #he d'eliminar els que tenen chr NA!
   
   df4kar.1 <- toGRanges(df4kar[!is.na(df4kar$p.b) & df4kar$p.b<p.th,c("chr","pos","pos","p.b")])
   df4kar.2 <- toGRanges(df4kar[!is.na(df4kar$p.s) & df4kar$p.s<p.th,c("chr","pos","pos","p.s")])
   df4kar.3 <- toGRanges(df4kar[!is.na(df4kar$p.n) & df4kar$p.n<p.th,c("chr","pos","pos","p.n")])
-  df4kar.4 <- toGRanges(df4kar[!is.na(df4kar$p.l) & df4kar$p.l<p.th,c("chr","pos","pos","p.l")])
+#  df4kar.4 <- toGRanges(df4kar[!is.na(df4kar$p.l) & df4kar$p.l<p.th,c("chr","pos","pos","p.l")])
   df4kar.5 <- toGRanges(df4kar[!is.na(df4kar$p.q) & df4kar$p.q<p.th,c("chr","pos","pos","p.q")])
   df4kar.6 <- toGRanges(df4kar[!is.na(df4kar$p.limma) & df4kar$p.limma<p.th,c("chr","pos","pos","p.limma")])
-
+  
   kp <- plotKaryotype(genome="hg19", plot.type=1,chromosomes=c("chrX"))
-  kpPlotDensity(kp,data=df4kar.1, data.panel = 1,r0=0,r1=0.16,col=colors[1])
-  kpPlotDensity(kp,data=df4kar.2, data.panel = 1,r0=0.17,r1=0.33,col=colors[2])
-  kpPlotDensity(kp,data=df4kar.3, data.panel = 1,r0=0.34,r1=0.50,col=colors[3])
-  kpPlotDensity(kp,data=df4kar.4, data.panel = 1,r0=0.51,r1=0.66,col=colors[4])
-  kpPlotDensity(kp,data=df4kar.5, data.panel = 1,r0=0.67,r1=0.84,col=colors[5])
-  kpPlotDensity(kp,data=df4kar.6, data.panel = 1,r0=0.85,r1=1,col=colors[6])
- 
+  kpPlotDensity(kp,data=df4kar.1, data.panel = 1,r0=0,r1=0.20,col=colors[1])
+  kpPlotDensity(kp,data=df4kar.2, data.panel = 1,r0=0.21,r1=0.40,col=colors[2])
+  kpPlotDensity(kp,data=df4kar.3, data.panel = 1,r0=0.41,r1=0.60,col=colors[3])
+#  kpPlotDensity(kp,data=df4kar.4, data.panel = 1,r0=0.51,r1=0.66,col=colors[4])
+  kpPlotDensity(kp,data=df4kar.5, data.panel = 1,r0=0.61,r1=0.80,col=colors[5])
+  kpPlotDensity(kp,data=df4kar.6, data.panel = 1,r0=0.81,r1=1,col=colors[6])
+  
 }
 
 
@@ -126,7 +158,7 @@ load(file=file.path(GSE50660_data,"betadata.models.adj.p.anot.sex.RData"))
 #  fn.karyo(beta.models.adj.p.anot,p.th=1e-8,cex=0.6)
 # dev.off()
 
-pdf(file=file.path(resultsDir,"Fig6.Sex.ChrX.10.min8.dens.GSE50.120519.pdf"))
+pdf(file=file.path(resultsDir,"Fig6.Sex.ChrX.10.min8.dens.GSE50.050719.pdf"))
 #png(file=file.path(resultsDir,"Fig5.Sex.ChrX.GSE50.png")) #no funciona, reportat a KaryoplotR
  fn.chrx(beta.models.adj.p.anot,p.th=1e-8,cex=0.6)
 dev.off()
@@ -136,7 +168,7 @@ load(file=file.path(GSE116339_data,"betadata.models.adj.p.anot.sex.RData"))
 # pdf(file=file.path(resultsDir,"Fig5.Sex.Karyo.10.min8.GSE11.pdf"))
 #  fn.karyo(beta.models.adj.p.anot,p.th=1e-8,cex=0.6)
 # dev.off()
-pdf(file=file.path(resultsDir,"Fig6.Sex.ChrX.10.min8.dens.GSE11.120519.pdf"))
+pdf(file=file.path(resultsDir,"Fig6.Sex.ChrX.10.min8.dens.GSE11.050719.pdf"))
  fn.chrx(beta.models.adj.p.anot,p.th=1e-8,cex=0.6)
 dev.off()
 
@@ -153,7 +185,7 @@ beta.models.adj.p.anot <- data.frame(rnb.meth2comp.models.withlimma,chr=cpg_chr,
 # pdf(file=file.path(resultsDir,"Fig5.Sex.Karyo.10.min8.WGBS.pdf"))
 #  fn.karyo(beta.models.adj.p.anot,p.th=1e-8,cex=0.6)
 # dev.off()
-pdf(file=file.path(resultsDir,"Fig6.Sex.ChrX.10.min8.dens.WGBS.120519.pdf"))
+pdf(file=file.path(resultsDir,"Fig6.Sex.ChrX.10.min8.dens.WGBS.050719.pdf"))
  fn.chrx(beta.models.adj.p.anot,p.th=1e-8,cex=0.6)
 dev.off()
 
@@ -170,7 +202,7 @@ beta.models.adj.p.anot <- data.frame(rnb.meth2comp.models.withlimma,chr=cpg_chr,
 # pdf(file=file.path(resultsDir,"Fig5.Sex.Karyo.10.min8.RRBS188.pdf"))
 #  fn.karyo(beta.models.adj.p.anot,p.th=1e-8,cex=0.6)
 # dev.off()
-pdf(file=file.path(resultsDir,"Fig6.Sex.ChrX.10.min8.dens.RRBS188.120519.pdf"))
+pdf(file=file.path(resultsDir,"Fig6.Sex.ChrX.10.min8.dens.RRBS188.050719.pdf"))
  fn.chrx(beta.models.adj.p.anot,p.th=1e-8,cex=0.6)
 dev.off()
 
@@ -182,19 +214,21 @@ library(OmicCircos)
 library(scales)
 colors <- hue_pal()(6)
 
+#5/7/19: elimino logistica
 fn.generate.tracks <- function(beta.models.adj.p.anot,p.th=0.05){
   #preparo dades
   colnms <- c("chr","Start","End","Value")
-  df4kar <- beta.models.adj.p.anot[,c("chr","pos","p.b","p.s","p.n","p.l","p.q","p.limma")]
+#  df4kar <- beta.models.adj.p.anot[,c("chr","pos","p.b","p.s","p.n","p.l","p.q","p.limma")]
+  df4kar <- beta.models.adj.p.anot[,c("chr","pos","p.b","p.s","p.n","p.q","p.limma")]
   track<-list(NA)
   #no se pq a gse11 hi ha alguns que no tenen chr
   track[[1]] <- df4kar[!is.na(df4kar$p.b) & !is.na(df4kar$chr) & df4kar$p.b<p.th,c("chr","pos","pos","p.b")]
   track[[2]] <- df4kar[!is.na(df4kar$p.s) & !is.na(df4kar$chr) & df4kar$p.s<p.th,c("chr","pos","pos","p.s")]
   track[[3]] <- df4kar[!is.na(df4kar$p.n) & !is.na(df4kar$chr) & df4kar$p.n<p.th,c("chr","pos","pos","p.n")]
-  track[[4]] <- df4kar[!is.na(df4kar$p.l) & !is.na(df4kar$chr) & df4kar$p.l<p.th,c("chr","pos","pos","p.l")]
-  track[[5]] <- df4kar[!is.na(df4kar$p.q) & !is.na(df4kar$chr) & df4kar$p.q<p.th,c("chr","pos","pos","p.q")]
-  track[[6]] <- df4kar[!is.na(df4kar$p.limma) & !is.na(df4kar$chr) & df4kar$p.limma<p.th,c("chr","pos","pos","p.limma")]
-  for (i in 1:6) colnames(track[[i]]) <- colnms
+ # track[[4]] <- df4kar[!is.na(df4kar$p.l) & !is.na(df4kar$chr) & df4kar$p.l<p.th,c("chr","pos","pos","p.l")]
+  track[[4]] <- df4kar[!is.na(df4kar$p.q) & !is.na(df4kar$chr) & df4kar$p.q<p.th,c("chr","pos","pos","p.q")]
+  track[[5]] <- df4kar[!is.na(df4kar$p.limma) & !is.na(df4kar$chr) & df4kar$p.limma<p.th,c("chr","pos","pos","p.limma")]
+  for (i in 1:5) colnames(track[[i]]) <- colnms
   return(track)
 }
 # fn.generate.tracks.X <- function(beta.models.adj.p.anot,p.th=0.05){
@@ -258,31 +292,63 @@ for (chr in c(1:22, "X", "Y")){
   ref.d <- rbind(ref.d, c(chr.s, 1, ref.s[length(ref.i),3]))
 }
 
-pdf(file=file.path(resultsDir,"Fig6.Circos.bg.10menys8.120519.pdf")) #l'ultim dona error track.wgbs[[4]] no te elements
-#pdf(file=file.path(resultsDir,"Fig5.Circos.bgwhite.10menys8.pdf")) #l'ultim dona error track.wgbs[[4]] no te elements
-# color del background de cada pista es pot fer amb h enlloc de s però tampoc es un density 
-  col.bg <- c("darkseagreen1","lightskyblue1","rosybrown1","lightgoldenrod")
-#  col.bg <- rep("white",4)
-  par(mar=c(2, 1, 2, 2));
-  plot(c(0,800), c(1,800), type="n", axes=F, xlab="", ylab="", main="");
-  circos(R=400, cir="hg19", W=10,   type="chr", print.chr.lab=T, scale=F);
-  circos(R=360, cir="hg19", W=25, mapping=ref.d, type="arc2",  B=F, col= col.bg[1], lwd=25, scale=F);
-  for (i in 1:6){
-    circos(R=390-5*i, cir="hg19", W=4,  mapping=track.gse50[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
-  }
-  circos(R=320, cir="hg19", W=25, mapping=ref.d, type="arc2",  B=F, col=col.bg[2], lwd=25, scale=F);
-  for (i in 1:6){
-    circos(R=350-5*i, cir="hg19", W=4,  mapping=track.gse11[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
-  }
-  circos(R=280, cir="hg19", W=25, mapping=ref.d, type="arc2",  B=F, col=col.bg[3], lwd=25, scale=F);
-  for (i in 1:6){
-    circos(R=310-5*i, cir="hg19", W=4,  mapping=track.rrbs[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
-  }
-  circos(R=240, cir="hg19", W=25, mapping=ref.d, type="arc2",  B=F, col=col.bg[4], lwd=25, scale=F);
-  for (i in c(1:3,5:6)){
-    circos(R=270-5*i, cir="hg19", W=4,  mapping=track.wgbs[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
-  }
+#elimino logística, com que era el 4rt element elimino el 4rt color
+library(scales)
+colors <- hue_pal()(6)[c(1:3,5:6)]
+
+pdf(file=file.path(resultsDir,"Fig6.Circos.bg.10menys8.050719.pdf")) 
+    col.bg <- c("darkseagreen1","lightskyblue1","rosybrown1","lightgoldenrod")
+    #  col.bg <- rep("white",4)
+    par(mar=c(2, 1, 2, 2));
+    plot(c(0,800), c(1,800), type="n", axes=F, xlab="", ylab="", main="");
+    circos(R=400, cir="hg19", W=10,   type="chr", print.chr.lab=T, scale=F);
+    circos(R=355, cir="hg19", W=30, mapping=ref.d, type="arc2",  B=F, col= col.bg[1], lwd=25, scale=F);
+    for (i in 1:5){
+      circos(R=390-7*i, cir="hg19", W=4,  mapping=track.gse50[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
+    }
+   
+    circos(R=315, cir="hg19", W=30, mapping=ref.d, type="arc2",  B=F, col=col.bg[2], lwd=25, scale=F);
+    for (i in 1:5){
+      circos(R=350-7*i, cir="hg19", W=4,  mapping=track.gse11[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
+    }
+   
+     circos(R=275, cir="hg19", W=30, mapping=ref.d, type="arc2",  B=F, col=col.bg[3], lwd=25, scale=F);
+    for (i in 1:5){
+      circos(R=310-7*i, cir="hg19", W=4,  mapping=track.rrbs[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
+    }
+    
+     circos(R=235, cir="hg19", W=30, mapping=ref.d, type="arc2",  B=F, col=col.bg[4], lwd=25, scale=F);
+    for (i in c(1:5)){
+      circos(R=270-7*i, cir="hg19", W=4,  mapping=track.wgbs[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
+    }
 dev.off()  
+
+
+# pdf(file=file.path(resultsDir,"Fig6.Circos.bg.10menys8.120519.pdf")) #l'ultim dona error track.wgbs[[4]] no te elements
+# #pdf(file=file.path(resultsDir,"Fig5.Circos.bgwhite.10menys8.pdf")) #l'ultim dona error track.wgbs[[4]] no te elements
+# # color del background de cada pista es pot fer amb h enlloc de s però tampoc es un density 
+#   col.bg <- c("darkseagreen1","lightskyblue1","rosybrown1","lightgoldenrod")
+# #  col.bg <- rep("white",4)
+#   par(mar=c(2, 1, 2, 2));
+#   plot(c(0,800), c(1,800), type="n", axes=F, xlab="", ylab="", main="");
+#   circos(R=400, cir="hg19", W=10,   type="chr", print.chr.lab=T, scale=F);
+#   circos(R=360, cir="hg19", W=25, mapping=ref.d, type="arc2",  B=F, col= col.bg[1], lwd=25, scale=F);
+#   for (i in 1:6){
+#     circos(R=390-5*i, cir="hg19", W=4,  mapping=track.gse50[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
+#   }
+#   circos(R=320, cir="hg19", W=25, mapping=ref.d, type="arc2",  B=F, col=col.bg[2], lwd=25, scale=F);
+#   for (i in 1:6){
+#     circos(R=350-5*i, cir="hg19", W=4,  mapping=track.gse11[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
+#   }
+#   circos(R=280, cir="hg19", W=25, mapping=ref.d, type="arc2",  B=F, col=col.bg[3], lwd=25, scale=F);
+#   for (i in 1:6){
+#     circos(R=310-5*i, cir="hg19", W=4,  mapping=track.rrbs[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
+#   }
+#   circos(R=240, cir="hg19", W=25, mapping=ref.d, type="arc2",  B=F, col=col.bg[4], lwd=25, scale=F);
+#   for (i in c(1:3,5:6)){
+#     circos(R=270-5*i, cir="hg19", W=4,  mapping=track.wgbs[[i]],   col.v=4,    type="s",B=FALSE, lwd=0.1, col=colors[i],cex=0.1,cutoff=0);
+#   }
+# dev.off()  
   
 #per al powerpoint: NO HO NECESSITO PQ HO FAIG AMB EL CUENTAGOTAS!
 col2rgb(col.bg)

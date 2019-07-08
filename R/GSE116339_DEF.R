@@ -257,7 +257,7 @@ load(file="PM.f.annot.RData")
 # 
 #beta.models.anot <- cbind(beta.models,PM.f.annot[680:684])
 beta.models.adj.p.anot <- cbind(beta.models.adj.p,PM.f.annot[680:684])
-save(beta.models.adj.p.anot,file="betadata.models.adj.p.anot.sex.RData") 
+#save(beta.models.adj.p.anot,file="betadata.models.adj.p.anot.sex.RData") 
 
 beta.models.adj.p.anot.p.s <- beta.models.adj.p.anot[beta.models.adj.p.anot$p.s<0.05,]
 beta.models.adj.p.anot.p.b <- beta.models.adj.p.anot[beta.models.adj.p.anot$p.b<0.05,]

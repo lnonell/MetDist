@@ -130,6 +130,8 @@ dev.off()
 ######### Supp Figure 7: Comparacions de cada dataset: Venn diagrams dels significatius #####
 ########################################################################################
 #posarés els mateixos colors que a les simulacions, que són aquests
+#faig unes proves amb la inflated... dóna moooolts resultats, no les faig servir
+
 scales::show_col(scales::hue_pal()(6))
 # i corresponen a: beta, simplex, normal,logistic,quantile, limma
 # color <- c("#F8766D" "#B79F00" "#00BA38" "#00BFC4" "#619CFF" "#F564E3")
@@ -221,7 +223,27 @@ head(beta.models.withlimma)
 beta.models.adj.p <- as.data.frame(apply(beta.models.withlimma,2,p.adjust))
 #i ara selecciono els params que vull plotar
 to.plot <-beta.models.adj.p[,c("p.s","p.b","p.n","p.q","p.limma")]
-venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.GSE50.sex.110519.pdf"))
+venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.GSE50.sex.080719.pdf"))
+# to.plot <-beta.models.adj.p[,c("p.sinf","p.b","p.n","p.q","p.limma")]
+# venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.GSE50.sex.sinf.050719.pdf"))
+
+# #miro de quin chr son els 281 per si estan majoritariament a X però NO!
+# l1 <- rownames(to.plot[!is.na(to.plot[,1]<0.05) & to.plot[,1]<0.05,])
+# l2 <- rownames(to.plot[!is.na(to.plot[,2]<0.05) & to.plot[,2]<0.05,])
+# l3 <- rownames(to.plot[!is.na(to.plot[,3]<0.05) & to.plot[,3]<0.05,])
+# l4 <- rownames(to.plot[!is.na(to.plot[,4]<0.05) & to.plot[,4]<0.05,])
+# l5 <- rownames(to.plot[!is.na(to.plot[,5]<0.05) & to.plot[,5]<0.05,])
+# 
+# spec.s<-setdiff(l1,c(l2,l3,l4,l5))
+# 
+# load(file=file.path(GSE50660_data,"beta.anot.RData"))
+# dim(beta.anot)
+# 
+# table(beta.anot[spec.s,"chr"])
+# # chr1 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19  chr2 chr20 chr21 chr22  chr3 
+# # 29    15    13    11     7     7     3    14    13     7    17    25     5     7     3    20 
+# # chr4  chr5  chr6  chr7  chr8  chr9  chrX 
+# # 8     7    20    23    12     2    12 
 
 #GSE116339
 load(file=file.path(GSE116339_data,file="betadata.models.sex.withlimma.RData"))
@@ -229,6 +251,9 @@ head(beta.models.withlimma)
 beta.models.adj.p <- as.data.frame(apply(beta.models.withlimma,2,p.adjust))
 to.plot <-beta.models.adj.p[,c("p.s","p.b","p.n","p.q","p.limma")]
 venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.GSE116339.sex.110519.pdf"))
+# to.plot <-beta.models.adj.p[,c("p.sinf","p.b","p.n","p.q","p.limma")]
+# venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.GSE116339.sex.sinf.050719.pdf"))
+
 
 #RRBS188 enlloc de RRBS216
 load(file=file.path(RRBS188_data,file="rnb.meth2comp.models.withlimma.RData")) 
@@ -237,6 +262,9 @@ head(rnb.meth2comp.models.withlimma)
 beta.models.adj.p <- as.data.frame(apply(rnb.meth2comp.models.withlimma,2,p.adjust))
 to.plot <-beta.models.adj.p[,c("p.s","p.b","p.n","p.q","p.limma")]
 venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.RRBS188.sex.110519.pdf"))
+# to.plot <-beta.models.adj.p[,c("p.sinf","p.b","p.n","p.q","p.limma")]
+# venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.RRBS188.sex.sinf.050719.pdf"))
+
 
 #WGBS81
 load(file=file.path(WGBS81_data,file="rnb.meth2comp.models.withlimma.RData")) 
@@ -246,28 +274,34 @@ head(rnb.meth2comp.models.withlimma)
 beta.models.adj.p <- as.data.frame(apply(rnb.meth2comp.models.withlimma,2,p.adjust))
 to.plot <-beta.models.adj.p[,c("p.s","p.b","p.n","p.q","p.limma")]
 venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.WGBS81.sex.110519.pdf"))
+# to.plot <-beta.models.adj.p[,c("p.sinf","p.b","p.n","p.q","p.limma")]
+# venn5D_betamodels(to.plot,file=file.path(resultsDir,"Venn.WGBS81.sex.sinf.050719.pdf"))
 
 ########################################################################################
 ######################## Figura 5: AIC dels models   ######################################
 ########################################################################################
-#colors <- c("#B79F00","#F8766D","#00BA38","#619CFF","#F564E3")
-#colors2 <- c("#B79F00","#F8766D","#00BA38","#619CFF","#F564E3","springgreen")
+#5/7/19 elimino logistic
+library(scales)
+colors <- hue_pal()(6)
+colors <- colors[c(1:3,5)]
+
+
 aic.plot <- function(beta.models.withlimma,tit="A"){
   ll <- nrow(beta.models.withlimma)
   aic.plot <- data.frame(x=1:ll,aic=beta.models.withlimma$aic.sinf, model="simplex") #inflated!!
   aic.plot <- rbind(aic.plot,
                     data.frame(x=1:ll,aic=beta.models.withlimma$aic.b, model="beta"),
                     data.frame(x=1:ll,aic=beta.models.withlimma$aic.n, model="normal"),
-                    data.frame(x=1:ll,aic=beta.models.withlimma$aic.l, model="logistic"),
+                   # data.frame(x=1:ll,aic=beta.models.withlimma$aic.l, model="logistic"),
                     data.frame(x=1:ll,aic=beta.models.withlimma$aic.q, model="quantile"))
   
-  aic.plot$model <- factor(aic.plot$model, levels=c("beta", "simplex","normal","logistic","quantile"))
+  aic.plot$model <- factor(aic.plot$model, levels=c("beta", "simplex","normal","quantile"))
   
   p <-ggplot(aic.plot) + geom_smooth(aes(x=x, y=aic, color=model)) + xlab("CpG")+ ylab("AIC")+
     theme(legend.position="bottom",legend.title = element_blank(), axis.title.x = element_blank(),
           axis.text.x = element_text(size=7,angle=45), axis.text.y = element_text(size=8),
           axis.title = element_text(size=8), legend.key.size = unit(0.8,"line"))+
-    # scale_color_manual(values=colors) + 
+     scale_color_manual(values=colors) + 
     ggtitle(tit)
   p
 }
@@ -333,8 +367,7 @@ ga <- grid.arrange(arrangeGrob(a + theme(legend.position="none"),
                                nrow=2),
                    mylegend, nrow=2,heights=c(10, 1))
 
-ggsave(file=file.path(resultsDir,"Fig5.AIC.sex.datasets.120519.pdf"), ga, width = 14, height = 14, units = "cm")
-
+ggsave(file=file.path(resultsDir,"Fig5.AIC.sex.datasets.050719.pdf"), ga, width = 14, height = 14, units = "cm")
 
 mylegend<-g_legend(d)
 ga <- grid.arrange(arrangeGrob(a + theme(legend.position="none"), 

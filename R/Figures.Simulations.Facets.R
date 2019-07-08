@@ -4,6 +4,7 @@
 #Table 2: Summary of performance measures for simulations N=100
 #Supplementary tables 3-7:  Summary of performance measures for simulations N=3,5,10,30,500
 #11/05/19 ho actualitzo tot
+#5/7/19 elimino logística
 
 #header amb tot
 source("D:/Doctorat/Simplex/MetDist/R/Figures.HeaderScript.R")
@@ -115,18 +116,20 @@ rrbs.ef <- eval_flatten(res.list)
 load(file=file.path(WGBS81_data,"simulated.models.list.RData"))
 wgbs.ef <- eval_flatten(res.list)
 
-eval.all <- rbind(data.frame(gse50.ef,dataset="A450k-smoking"),
-                   data.frame(gse11.ef,dataset="EPIC-PBB"),
+
+
+eval.all <- rbind(data.frame(gse50.ef,dataset="a450k-smoking"),
+                   data.frame(gse11.ef,dataset="aEPIC-PBB"),
                    data.frame(rrbs.ef,dataset="RRBS-ES"),
                    data.frame(wgbs.ef,dataset="WGBS-BLUE"))
 str(eval.all)
 
-eval.all <- eval.all[(eval.all$model.p %in% c("p.b","p.s","p.n","p.l","p.q","p.limma")),]
+eval.all <- eval.all[(eval.all$model.p %in% c("p.b","p.s","p.n","p.q","p.limma")),]
 
 eval.all$model <- factor(recode(eval.all$model.p,  p.b="beta", p.s="simplex",
-                                  p.n="normal", p.l="logistic", 
+                                  p.n="normal", 
                                   p.q="quantile",p.limma="limma"),
-                           levels=c("beta", "simplex","normal","logistic","quantile","limma"))
+                           levels=c("beta", "simplex","normal","quantile","limma"))
 
 eval.all$dist <- factor(eval.all$dist, levels=c("simplex","beta","normal"))
 
@@ -144,8 +147,8 @@ all <- p +  theme(legend.position="bottom",legend.title = element_blank(), axis.
 
 all
 
-ggsave(file=file.path(resultsDir,"Fig4.jaccard.simulations.facets.120519.png"), all, width = 20, height = 16, units = "cm")
-ggsave(file=file.path(resultsDir,"Fig4.jaccard.simulations.facets.120519.pdf"), all, width = 20, height = 16, units = "cm")
+ggsave(file=file.path(resultsDir,"Fig4.jaccard.simulations.facets.050719.png"), all, width = 20, height = 16, units = "cm")
+ggsave(file=file.path(resultsDir,"Fig4.jaccard.simulations.facets.050719.pdf"), all, width = 20, height = 16, units = "cm")
 
 #faig subset de 0 a 30
 eval.all.0.30 <- eval.all[eval.all$N %in% c(3,5,10,30),]
@@ -165,8 +168,104 @@ all.0.30 <- p +  theme(legend.position="bottom",legend.title = element_blank(), 
 
 all.0.30
 
-ggsave(file=file.path(resultsDir,"SuppFig3.jaccard.simulations.0.30.facets.120519.png"), all.0.30, width = 20, height = 16, units = "cm")
-ggsave(file=file.path(resultsDir,"SuppFig3.jaccard.simulations.0.30.facets.120519.pdf"), all.0.30, width = 20, height = 16, units = "cm")
+ggsave(file=file.path(resultsDir,"SuppFig3.jaccard.simulations.0.30.facets.050719.png"), all.0.30, width = 20, height = 16, units = "cm")
+ggsave(file=file.path(resultsDir,"SuppFig3.jaccard.simulations.0.30.facets.050719.pdf"), all.0.30, width = 20, height = 16, units = "cm")
+
+
+###############################################################################
+################## provo d'afegir la beta-binomial per a NGS ##################
+###############################################################################
+
+#provo els beta.bin
+eval_flatten_bb <- function(data){
+  is <- c(3,5,10,30,100,500)
+  js <- c("beta-binomial")
+  evals <- NULL
+  for (i in 1:6){ #N de cada simulació
+    for (j in 1){
+      mod <- t(models.eval(models=res.list[[i]][[j]], dml.r=100,alpha=0.05, adjust=TRUE))
+      evals <- rbind(evals,
+                     data.frame(mod, model.p=rownames(mod),N=is[i],dist=js[j],stringsAsFactors = F))
+    }
+  }
+  return(evals)
+}  
+
+load(file=file.path(RRBS188_data,"simulated.models.bb.list.RData"))
+rrbs.ef.bb <- eval_flatten_bb(res.list)
+load(file=file.path(WGBS81_data,"simulated.models.bb.list.RData"))
+wgbs.ef.bb <- eval_flatten_bb(res.list)
+
+eval.all.t <- rbind(data.frame(gse50.ef,dataset="a450k-smoking"),
+                    data.frame(gse11.ef,dataset="aEPIC-PBB"),
+                    data.frame(rrbs.ef,dataset="RRBS-ES"),
+                    data.frame(rrbs.ef.bb,dataset="RRBS-ES"),
+                    data.frame(wgbs.ef,dataset="WGBS-BLUE"),
+                    data.frame(wgbs.ef.bb,dataset="WGBS-BLUE"))
+
+eval.all <- eval.all.t[(eval.all.t$model.p %in% c("p.b","p.s","p.n","p.q","p.limma","p.bb")),]
+
+eval.all$model <- factor(recode(eval.all$model.p,  p.b="beta", p.s="simplex",
+                                p.n="normal", p.q="quantile",p.limma="limma",p.bb="beta-binomial"),
+                         levels=c("beta", "simplex","normal","quantile","limma","beta-binomial"))
+
+eval.all$dist <- factor(eval.all$dist, levels=c("simplex","beta","normal","beta-binomial"))
+
+p <- ggplot(data=eval.all,aes(x=N, y=jaccard, colour=model)) +
+  geom_point(size = 1)+ geom_line(size=0.6) +ylim(0,1)
+p +  theme(legend.position="bottom",legend.title = element_blank(), axis.title.x = element_blank(),
+           axis.text.x = element_text(size=8,angle=45), axis.text.y = element_text(size=8),
+           axis.title = element_text(size=7), legend.key.size = unit(0.8,"line")) +
+  scale_x_continuous(breaks=as.numeric(names(res.list)))
+
+all <- p +  theme(legend.position="bottom",legend.title = element_blank(), axis.title.x = element_blank(),
+                  axis.text.x = element_text(size=8,angle=45), axis.text.y = element_text(size=8),
+                  axis.title = element_text(size=7), legend.key.size = unit(0.8,"line")) +
+  scale_x_continuous(breaks=as.numeric(names(res.list))) + facet_grid (dist ~ dataset)
+
+all
+
+
+ggsave(file=file.path(resultsDir,"Fig4.jaccard.simulations.withbetabin.facets.050719.png"), all, width = 20, height = 16, units = "cm")
+#ggsave(file=file.path(resultsDir,"Fig4.jaccard.simulations.facets.120519.pdf"), all, width = 20, height = 16, units = "cm")
+
+#faig subset de 0 a 30
+eval.all.0.30 <- eval.all[eval.all$N %in% c(3,5,10,30),]
+
+#i faig el mateix plot
+p <- ggplot(data=eval.all.0.30,aes(x=N, y=jaccard, colour=model)) +
+  geom_point(size = 1)+ geom_line(size=0.6) +ylim(0,1)
+p +  theme(legend.position="bottom",legend.title = element_blank(), axis.title.x = element_blank(),
+           axis.text.x = element_text(size=8,angle=45), axis.text.y = element_text(size=8),
+           axis.title = element_text(size=7), legend.key.size = unit(0.8,"line")) +
+  scale_x_continuous(breaks=as.numeric(names(res.list)))
+
+all.0.30 <- p +  theme(legend.position="bottom",legend.title = element_blank(), axis.title.x = element_blank(),
+                       axis.text.x = element_text(size=8,angle=45), axis.text.y = element_text(size=8),
+                       axis.title = element_text(size=7), legend.key.size = unit(0.8,"line")) +
+  scale_x_continuous(breaks=as.numeric(names(res.list))) + facet_grid (dist ~ dataset)
+
+all.0.30
+
+ggsave(file=file.path(resultsDir,"SuppFig3.jaccard.simulations.withbetabin.0.30.facets.050719.png"), all.0.30, width = 20, height = 16, units = "cm")
+
+# #provo de fer només la part dels conjunts grans, a veure si es veu més clar: no queda gaire bé...
+# eval.all.100.500 <- eval.all[eval.all$N %in% c(100,500),]
+# 
+# #i faig el mateix plot
+# p <- ggplot(data=eval.all.100.500,aes(x=N, y=jaccard, colour=model)) +
+#   geom_point(size = 1)+ geom_line(size=0.6) +ylim(0,1)
+# p +  theme(legend.position="bottom",legend.title = element_blank(), axis.title.x = element_blank(),
+#            axis.text.x = element_text(size=8,angle=45), axis.text.y = element_text(size=8),
+#            axis.title = element_text(size=7), legend.key.size = unit(0.8,"line")) +
+#   scale_x_continuous(breaks=as.numeric(names(res.list)))
+# 
+# all.100.500 <- p +  theme(legend.position="bottom",legend.title = element_blank(), axis.title.x = element_blank(),
+#                        axis.text.x = element_text(size=8,angle=45), axis.text.y = element_text(size=8),
+#                        axis.title = element_text(size=7), legend.key.size = unit(0.8,"line")) +
+#   scale_x_continuous(breaks=as.numeric(names(res.list))) + facet_grid (dist ~ dataset)
+# 
+# all.100.500
 
 
 #####################################################################################

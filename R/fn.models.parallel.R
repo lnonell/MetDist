@@ -53,7 +53,7 @@ fn.models.parallel <- function(cpgs,cond1,cores=4){
       aic.b <- AIC(m.b)
     }
     
-    #simplex inflated with ZOIP package, need tot transform into a df
+    #simplex inflated with ZOIP package, need to transform into a df
     df <- data.frame(cond,cpgi)
     m.sinf <- try(RM.ZOIP(formula.mu = cpgi~cond,  
                           link = c("logit","identity","identity","identity"), family="Simplex", data=df),silent=T)
@@ -65,7 +65,7 @@ fn.models.parallel <- function(cpgs,cond1,cores=4){
         pvalue   <- 2 * stats::pnorm(abs(zvalue), lower.tail=F)
         p.sinf<-pvalue["cond2"]
         #manual computation of AIC: https://stats.stackexchange.com/questions/87345/calculating-aic-by-hand-in-r
-        aic.sinf <- -2*m.sinf$objective+2*2 #like the others K=2, standard AIC, default
+        aic.sinf <- -2*m.sinf$objective+2*2 #like the others K=2, standard AIC, default objective is the log-likelihood
           
       }
     }  

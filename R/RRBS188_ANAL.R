@@ -85,6 +85,10 @@ table(rrbs.best.dist[,1])
 # beta.aic  normal.aic simplex.aic 
 # 43138        1949      225482 
 
+table(rrbs.best.dist[,2])
+# beta.ks.p  normal.ks.p simplex.ks.p 
+# 18875        41600       210094 
+
 #######################################################
 #agafo els vells
 load(file=file.path("D:/Doctorat/Simplex/Data_OLD/RRBS_188","best.dist.betabin.filtered.RData"))
@@ -169,6 +173,12 @@ t1 <- Sys.time()
 simulations.all <- fn.simulations(est.params=rnb.est.params,cond.n= c(3,5,10,30,100,500),cores=7)
 t2 <- Sys.time()
 t2-t1 #2.028116 hours (2 cores) 3.054866 hours (1 core)  55.81003 mins (3 cores) 29.87096 mins (7 cores)
+
+############ betabin
+t1 <- Sys.time()
+simulations.bb.all <- fn.simulations.betabin(est.params=rnb.betabin.est.params,cond.n= c(3,5,10,30,100,500),cores=6)
+t2 <- Sys.time()
+t2-t1 #3.798961 mins (6 cores)
 
 
 #############################################################################

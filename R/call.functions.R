@@ -15,6 +15,7 @@ source(file=file.path(codeDir,"fn.simu.dml.R"))
 source(file=file.path(codeDir,"fn.simu.non.dml.R"))
 source(file=file.path(codeDir,"fn.simulations.R"))
 source(file=file.path(codeDir,"apply.limma.R"))
+source(file=file.path(codeDir,"fn.simulations.betabin.R"))
 
 source(file=file.path(codeDir,"models.eval.R"))
 source(file=file.path(codeDir,"res.chr.R"))

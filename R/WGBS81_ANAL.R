@@ -67,6 +67,9 @@ wgbs.best.dist <- t(apply(best.dist.all,1,best.aic.ks))
 table(wgbs.best.dist[,1])
 # beta.aic  normal.aic simplex.aic 
 # 108304       10163       85606 
+table(wgbs.best.dist[,2])
+# beta.ks.p  normal.ks.p simplex.ks.p 
+# 79761        64951        59361 
 
 #######################################################
 #AKIbeta-binomial: AKI FER SUBSETTING
@@ -151,6 +154,7 @@ dim(rnb.betabin.est.params)# 204073      6
 #guardo
 save(rnb.betabin.est.params,file="betabin.params.est.RData")
 load(file="betabin.params.est.RData")
+head(rnb.betabin.est.params)
 
 
 #############################################################################
@@ -163,6 +167,12 @@ t2 <- Sys.time()
 t2-t1 #2.028116 hours (2 cores) 3.147326 hours (1 core) 56.85982 mins (3 cores)
 
 load(file="simulated.cpgs.list.RData")
+
+############ betabin
+t1 <- Sys.time()
+simulations.bb.all <- fn.simulations.betabin(est.params=rnb.betabin.est.params,cond.n= c(3,5,10,30,100,500),cores=6)
+t2 <- Sys.time()
+t2-t1 #3.713122 mins (6 cores)
 
 
 #############################################################################

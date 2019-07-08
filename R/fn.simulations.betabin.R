@@ -1,70 +1,98 @@
 fn.simulations.betabin <- function(est.params=est.params,cond.n= c(3,5,10,30,100,500),cores=6){
-  #he de guardar els models, si no dp no els podré estudiar
-  #li passo els parametresetimats de la beta bin i agafo mle també?
-  #he de cridar a fn.models.betabin.parallel
+  #en aquest cas faig moments i no mle
+  require(VGAM)
   res.list<-NULL
   cpgs.list <-NULL
+  #en aquest cas també cal guardar les sizes
+  ns.list <-NULL
+  
   i=1
   for (n in cond.n){
     # 1 generate simulations
     #betabin
+    print(i)
     print(n)
+    N.cond1=n
+    N.cond2=n
     
-    p1.v <- est.params$bb.mle.s1[!is.na(est.params$bb.mle.s1)]
-    p2.v <- est.params$bb.mle.s2[!is.na(est.params$bb.mle.s1)]
-    p3.n <- est.params$real.n[!is.na(est.params$bb.mle.s1)]
+    p1.v <- est.params$bb.mom.s1[!is.na(est.params$bb.mom.s1) & est.params$bb.mom.s1>0 ] #n'hi ha 58 negatius
+    p2.v <- est.params$bb.mom.s2[!is.na(est.params$bb.mom.s1) & est.params$bb.mom.s1>0 ]
+    n.v <- est.params$real.n[!is.na(est.params$bb.mom.s1) & est.params$bb.mom.s1>0 ]
     
-    #fer el mateix per la betabinomial: AKI
-    cpgs.simplex.dml <- fn.simu.dml(mod="simplex", p1.v=p1.v, p2.v=p2.v, N=100, N.cond1=n, N.cond2=n)
-    cpgs.simplex.non.dml <- fn.simu.non.dml(mod="simplex", p1.v=p1.v, p2.v=p2.v, N=1900, N.cond1=n, N.cond2=n)
-    cpgs.simplex <-rbind(cpgs.simplex.dml,cpgs.simplex.non.dml) 
+    N.cond = N.cond1+N.cond2
+   
+    N=100
+    sample.names = c(paste("SC1",1:N.cond1,sep="_"),paste("SC2",1:N.cond2,sep="_"))
+    row.names = paste0("dml",1:N)
+    cpgs.dml <- matrix(NA, nrow=N, ncol= (N.cond), dimnames=list(row.names,sample.names))
+    ns.dml <- matrix(NA, nrow=N, ncol= (N.cond), dimnames=list(row.names,sample.names))
+    for (j in 1:N) {
+      k <-sample(1:length(p1.v),1)
+      s1 <- p1.v[k]
+      s2 <- p2.v[k]
+      n.1 <- n.v[k]
+      cpgi.1 <- rbetabinom.ab(n=N.cond1,size=n.1, s1,s2)
+      #he de generar les n's entre el valor de cpgi.1 i ni.1, que és el maxim
+      ni.1 <- unlist(lapply(cpgi.1,function(x) if (x==n.1) x else sample(x:n.1,1))) #aqui si poso ni no compto
+      # que de vegades el coverage és molt més gran, hauria de fer servir el coverage?
+      #si x=n.1 fa el que li dona la gana i retorna un valor inferior!
+      
+      k <-sample(1:length(p1.v),1)
+      s1 <- p1.v[k]
+      s2 <- p2.v[k]
+      n.2 <- n.v[k] #potser la n hauria de ser la mateixa??
+      cpgi.2 <- rbetabinom.ab(n=N.cond1,size=n.2, s1,s2) 
+      ni.2 <- unlist(lapply(cpgi.2,function(x) if (x==n.2) x else sample(x:n.2,1)))
+      
+      cpgs.dml[j,] <- c(cpgi.1,cpgi.2)
+      ns.dml[j,] <- c(ni.1,ni.2) #poso el màxim pq si no podria donar un error però no se si te gaire sentit
+      if(any((ns.dml[j,]-cpgs.dml[j,])<0)) print (paste(j,"KK",n.1,n.2,sep="_"))
+    }
     
-    #beta
-    p1.v <- est.params$b.mle.s1[!is.na(est.params$b.mle.s1)]
-    p2.v <- est.params$b.mle.s2[!is.na(est.params$b.mle.s1)]
-    cpgs.beta.dml <- fn.simu.dml(mod="beta", p1.v=p1.v, p2.v=p2.v, N=100, N.cond1=n, N.cond2=n)
-    cpgs.beta.non.dml <- fn.simu.non.dml(mod="beta", p1.v=p1.v, p2.v=p2.v, N=1900, N.cond1=n, N.cond2=n)
-    cpgs.beta <-rbind(cpgs.beta.dml,cpgs.beta.non.dml)
-    
-    #normal
-    p1.v <- est.params$n.mle.m[!is.na(est.params$n.mle.m)]
-    p2.v <- est.params$n.mle.sd[!is.na(est.params$n.mle.m)]
-    cpgs.normal.dml <- fn.simu.dml(mod="normal", p1.v=p1.v, p2.v=p2.v, N=100, N.cond1=n, N.cond2=n)
-    cpgs.normal.non.dml <- fn.simu.non.dml(mod="normal", p1.v=p1.v, p2.v=p2.v, N=1900, N.cond1=n, N.cond2=n)
-    cpgs.normal <-rbind(cpgs.normal.dml,cpgs.normal.non.dml)
+    #ara nondml
+    N=1900
+    sample.names = c(paste("SC1",1:N.cond1,sep="_"),paste("SC2",1:N.cond2,sep="_"))
+    row.names = paste0("l",1:N)
+    cpgs.nondml <- matrix(NA, nrow=N, ncol= (N.cond), dimnames=list(row.names,sample.names))
+    ns.nondml <- matrix(NA, nrow=N, ncol= (N.cond), dimnames=list(row.names,sample.names))
+    for (j in 1:N) {
+      k <-sample(1:length(p1.v),1)
+      s1 <- p1.v[k]
+      s2 <- p2.v[k]
+      n.1 <- n.v[k]
+      cpgs.nondml[j,] <- rbetabinom.ab(n=N.cond,size=n.1, s1,s2)
+      ns.nondml[j,] <- unlist(lapply(cpgs.nondml[j,],function(x) if (x==n.1) x else sample(x:n.1,1)))
+      if(any((ns.nondml[j,]-cpgs.nondml[j,])<0)) print (paste(j,"KK",n.1,sep="_"))
+    }
+    # ajuntar i return
+    cpgs <-rbind(cpgs.dml,cpgs.nondml)
+    ns.all <- rbind(ns.dml,ns.nondml)
     
     # 2 run models in parallel!!
     cond <- as.factor(c(rep(1,n),rep(2,n))) #sempre 1 i 2, les fns estan preparades per això
-    simplex.models <- fn.models.parallel(cpgs.simplex, cond1=cond, cores=cores)
-    beta.models <- fn.models.parallel(cpgs.beta, cond1=cond, cores=cores)
-    normal.models <- fn.models.parallel(cpgs.normal, cond1=cond, cores=cores)
-    # 3 limma
-    cpgs.simplex.limma <- apply.limma(cpgs.simplex,cond) #retorna la toptable ordenada
-    cpgs.beta.limma <- apply.limma(cpgs.beta,cond) #retorna la toptable ordenada
-    cpgs.normal.limma <- apply.limma(cpgs.normal,cond) #retorna la toptable ordenada
-    
-    #ho afegeixo a cada model 
-    cpgs.simplex.models.withlimma <- data.frame(simplex.models,p.limma=cpgs.simplex.limma$P.Value)
-    cpgs.beta.models.withlimma <- data.frame(beta.models,p.limma=cpgs.beta.limma$P.Value)
-    cpgs.normal.models.withlimma <- data.frame(normal.models,p.limma=cpgs.normal.limma$P.Value)
-    
-    #guardo els models
-    cpgs <- list(cpgs.simplex=cpgs.simplex, cpgs.beta=cpgs.beta, cpgs.normal=cpgs.normal)
-    
-    models.list <- list(cpgs.simplex.models=cpgs.simplex.models.withlimma, 
-                        cpgs.beta.models=cpgs.beta.models.withlimma, 
-                        cpgs.normal.models=cpgs.normal.models.withlimma)
+    #aquí es on tinc dues opcions, fer el covg tal i com l'he calculat o posant el real
+    #si poso el real hauria de carregar les dades reals de coverage i agafar la k que correspongui...
+    #complicat
+    bb.models <- fn.models.betabin.parallel(all=cpgs,covg=ns.all, cond1=cond, cores=cores)
+ 
+    #guardo les cpgs, els models i les ns
+    cpgs <- list(cpgs.bb=cpgs)
+    ns <- list(ns.bb=ns.all)
+    models.list <- list(cpgs.bb.models=bb.models)
     
     cpgs.list[[i]] <- cpgs
+    ns.list[[i]] <- ns
     res.list[[i]] <- models.list
     
     i=i+1
   }
   
   names(cpgs.list) <- cond.n 
-  save(cpgs.list,file="simulated.cpgs.list.RData")
+  save(cpgs.list,file="simulated.cpgs.bb.list.RData")
+  names(ns.list) <- cond.n 
+  save(ns.list,file="simulated.ns.bb.list.RData")
   names(res.list) <- cond.n  
-  save(res.list,file="simulated.models.list.RData")
+  save(res.list,file="simulated.models.bb.list.RData")
   #ho guardo tot i retorno els models
   return(res.list)  
 }

@@ -7,7 +7,7 @@ est.betabin.params <- function(xi,ni){
   xi.prime <- round(xi[!is.na(xi)],0)
   ni.prime <- ni[!is.na(xi)]
   
-  n<- max(xi.prime)
+  n<- max(xi.prime) #aqui estava xi.prime però hauria de ser ni.prime? sembla que no canvia
   betabin.params <-rep(NA,6)
   betabin.params[6] <- n
   names(betabin.params) <- c("bb.mom.s1","bb.mom.s2","sim.n","bb.mle.s1","bb.mle.s2","real.n")
